@@ -3,20 +3,54 @@ from pygame.locals import *
 import sys
 import random
 
+RED = (210, 50, 50)
+ORANGE = (230, 110, 50)
+YELLOW = (225, 225, 10)
+GREEN = (0, 225, 50)
+BLUE = (70, 130, 240)
+PURPLE = (200, 0, 210)
+
+colorList = [RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE]
+
+SCREEN_WIDTH = 1024
+SCREEN_HEIGHT = 512
+
+class TestObject:
+    def __init__(self, surface):
+        self.surface = surface
+        self.font = pygame.font.Font(size=64)
+        self.location = [random.randint(0, 500), random.randint(0, 500)]
+        self.velocity = [10, 5]
+        self.color = RED
+        self.text = "HELLO, WORLD!"
+    
+    def update(self):
+        self.location[0] += self.velocity[0]
+        self.location[1] += self.velocity[1]
+
+        if ((self.location[0] >= SCREEN_WIDTH-350) and (self.velocity[0] > 0)) or ((self.location[0] <= 0) and (self.velocity[0] < 0)):
+            self.velocity[0] = -self.velocity[0]
+            self.color = random.choice(colorList)
+
+        if (self.location[1] >= SCREEN_HEIGHT-32) and (self.velocity[1] > 0) or ((self.location[1] <= 0) and (self.velocity[1] < 0)):
+            self.velocity[1] = -self.velocity[1]
+            self.color = random.choice(colorList)
+
+        displayText = self.font.render(self.text, True, self.color)
+        self.surface.blit(displayText, self.location)
+
 # Initialize pygame
 pygame.init()
 
 # Initialize the game timer and specify the frame rate
 gameTime = pygame.time.Clock()
-FPS = 2
+FPS = 24
 
 # Initialize the window
 displaysurface = pygame.display.set_mode((1024, 512))
 pygame.display.set_caption("Pinball Test")
 
-
-font = pygame.font.Font(size=64)
-counter = 0
+testText = TestObject(displaysurface)
 
 # Game Loop
 while True:
@@ -27,9 +61,7 @@ while True:
     
     displaysurface.fill((255, 255, 255))
 
-    counterText = font.render(str(counter), True, (0, 0, 0))
-    displaysurface.blit(counterText, (random.randint(64, 960), random.randint(64, 512-64)))
-    counter += 1
+    testText.update()
 
     pygame.display.update()
     gameTime.tick(FPS)
@@ -40,8 +72,6 @@ while True:
 '''For video, look into OpenCV or MoviePy. Might be able to play video directly. If using PyGame pygvideo might work'''
 
 '''If using PyGame, it can handle game sounds'''
-
-'''Lights will be APA102 addressable LEDs using SPI. Check ECET 434 textbook ch.8 for example using Luma'''
 
 '''For communication with the PLC, look into pycomm3 or pylogix'''
 
