@@ -2,6 +2,8 @@ import pygame
 from pygame.locals import *
 import sys
 import random
+from pycomm3 import LogixDriver
+from pinball_PLC import PinballPLC
 
 RED = (210, 50, 50)
 ORANGE = (230, 110, 50)
@@ -10,58 +12,74 @@ GREEN = (0, 225, 50)
 BLUE = (70, 130, 240)
 PURPLE = (200, 0, 210)
 
-colorList = [RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE]
-
 SCREEN_WIDTH = 1024
 SCREEN_HEIGHT = 512
 
-class TestObject:
+class Score:
     def __init__(self, surface):
         self.surface = surface
         self.font = pygame.font.Font(size=64)
         self.location = [random.randint(0, 500), random.randint(0, 500)]
-        self.velocity = [10, 5]
-        self.color = RED
-        self.text = "HELLO, WORLD!"
+        self.color = BLUE
+        self.points = 0
     
     def update(self):
-        self.location[0] += self.velocity[0]
-        self.location[1] += self.velocity[1]
-
-        if ((self.location[0] >= SCREEN_WIDTH-350) and (self.velocity[0] > 0)) or ((self.location[0] <= 0) and (self.velocity[0] < 0)):
-            self.velocity[0] = -self.velocity[0]
-            self.color = random.choice(colorList)
-
-        if (self.location[1] >= SCREEN_HEIGHT-32) and (self.velocity[1] > 0) or ((self.location[1] <= 0) and (self.velocity[1] < 0)):
-            self.velocity[1] = -self.velocity[1]
-            self.color = random.choice(colorList)
-
-        displayText = self.font.render(self.text, True, self.color)
+        displayText = self.font.render(str(self.points), True, self.color)
         self.surface.blit(displayText, self.location)
+    
+    def addPoints(self, points: int):
+        self.points += points
 
 # Initialize pygame
 pygame.init()
 
 # Initialize the game timer and specify the frame rate
 gameTime = pygame.time.Clock()
-FPS = 24
+FPS = 4
 
 # Initialize the window
 displaysurface = pygame.display.set_mode((1024, 512))
 pygame.display.set_caption("Pinball Test")
 
-testText = TestObject(displaysurface)
+# Set up custom events
+PLC_GET = pygame.USEREVENT + 1
+
+# Initialize display objects
+score = Score(displaysurface)
+
+# Set up PLC comms
+plc = PinballPLC()
+plc.start()
 
 # Game Loop
 while True:
+
+    # Check all pygame events
     for event in pygame.event.get():
-        if event.type == QUIT:
+
+        # Quit the game
+        if event.type == QUIT:  
+            plc.end()
             pygame.quit()
             sys.exit()
-    
-    displaysurface.fill((255, 255, 255))
+        
+        if event.type == pygame.KEYDOWN:
+            keys = pygame.key.get_pressed()
+            if keys[K_g]:
+                score.addPoints(500)
+        
+        # 
+        if event.type == PLC_GET:
+            plc.read()
+            if plc.getTags() != 0:
+                score.addPoints(750)
 
-    testText.update()
+    
+    if plc.isReady():
+        pygame.event.post(pygame.event.Event(PLC_GET))
+
+    displaysurface.fill((255, 255, 255))
+    score.update()
 
     pygame.display.update()
     gameTime.tick(FPS)
