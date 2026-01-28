@@ -4,7 +4,7 @@ import time
 
 PLC_IP = '10.230.49.142'
 
-# CIPDriver.discover()
+
 
 with open("PLC-Log.txt", "a") as log:
     log.write("****************\n")
@@ -25,11 +25,37 @@ with open("PLC-Log.txt", "a") as log:
     tag_list = plc.get_tag_list()
     for tag in tag_list:
         startTime = time.perf_counter()
+
         plc_data = plc.read(tag["tag_name"])
+
+        # *** Cody's test code ***
+        tag_bits = plc_data.value['Data']
+
+        # # List version
+        # inputs = []
+
+        # for bit in range(16):
+        #     inputs.append(bool((io_word >> bit) & 1))
+        
+        # Dictionary version
+        plc_inputs = {
+            "flipper_left":  bool((tag_bits >> 1) & 1), # parsing by name
+            "flipper_right": bool((tag_bits >> 2) & 1), 
+            "bumper_1":      bool((tag_bits >> 12) & 1),
+        }
+
+        if plc_inputs["bumper_1"]:
+            print("bumper_1")
+
+
+
         endTime = time.perf_counter()
         log.write(f"\t Read {str(plc_data)} in {endTime - startTime:.3f}s\n")
+    
+    
     # print(plc.read("Local:1:I").value['Data'])
 
+    # # Write testing
     # writeZero = {'Data': 4098, 'Fault': 0}
     # output = plc.write("Local:1:I", writeZero)
     
