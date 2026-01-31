@@ -29,7 +29,13 @@ with open("PLC-Log.txt", "a") as log:
         plc_data = plc.read(tag["tag_name"])
 
         # *** Cody's test code ***
-        tag_bits = plc_data.value['Data']
+        # tag_bits = plc_data.value
+        # if type(tag_bits) is dict:
+        #     try: 
+        #         print(tag_bits['Data'])
+        #     except KeyError:
+        #         print("No Data")
+
 
         # # List version
         # inputs = []
@@ -37,15 +43,19 @@ with open("PLC-Log.txt", "a") as log:
         # for bit in range(16):
         #     inputs.append(bool((io_word >> bit) & 1))
         
-        # Dictionary version
-        plc_inputs = {
-            "flipper_left":  bool((tag_bits >> 1) & 1), # parsing by name
-            "flipper_right": bool((tag_bits >> 2) & 1), 
-            "bumper_1":      bool((tag_bits >> 12) & 1),
-        }
+        if tag["tag_name"] == "Local:1:I":
+            tag_bits = int(plc_data.value['Data'])
+            # Dictionary version
+            plc_inputs = {
+                "left_button":  bool((tag_bits >> 0) & 1), # parsing by name
+                "right_button": bool((tag_bits >> 2) & 1), 
+            }
 
-        if plc_inputs["bumper_1"]:
-            print("bumper_1")
+            if plc_inputs["left_button"]:
+                print("Left Button")
+            
+            if plc_inputs["right_button"]:
+                print("Right Button")
 
 
 
@@ -60,4 +70,4 @@ with open("PLC-Log.txt", "a") as log:
     # output = plc.write("Local:1:I", writeZero)
     
     plc.close()
-    log.write("****************\n\n")
+    log.write("****************\n")
