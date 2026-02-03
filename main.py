@@ -2,7 +2,6 @@ import pygame
 from pygame.locals import *
 import sys
 import random
-from pycomm3 import LogixDriver
 from pinball_PLC import PinballPLC
 import pygvideo
 
@@ -12,6 +11,8 @@ YELLOW = (225, 225, 10)
 GREEN = (0, 225, 50)
 BLUE = (70, 130, 240)
 PURPLE = (200, 0, 210)
+
+COUNTER_01 = "Program:MainProgram.BUTTON_CNT.ACC"
 
 class Score:
     # Maybe move these game objects to their own file
@@ -38,7 +39,8 @@ gameTime = pygame.time.Clock()
 FPS = 30
 
 # Initialize the window to fullscreen
-displaysurface = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+# displaysurface = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+displaysurface = pygame.display.set_mode((600, 400))
 pygame.display.set_caption("Pinball Test")
 
 # Set up custom events
@@ -54,9 +56,8 @@ video = pygvideo.Video("Test Functions\messi_score.mp4")
 video.set_size(displaysurface.get_size())
 video.prepare()
 
-# # Set up PLC comms
-# plc = PinballPLC()
-# plc.start()
+# Set up PLC comms
+plc = PinballPLC()
 
 # Game Loop
 running = True
@@ -81,15 +82,18 @@ while running:
                 pygame.event.post(pygame.event.Event(QUIT))
 
         # if event.type == PLC_GET:
-        #     plc.read()
-        #     if plc.getTags() != 0:
-        #         score.addPoints(750)
+        #     for tag in plc_data:
+        #         if (tag[0] == COUNTER_01) and (tag[1] > 0):
+        #             score.addPoints(2500*tag[1])
+        #             cheer.play()
+        #     plc.resetTags()
+
 
         # video.handle_event(event)
 
     # # Post event when PLC comms returns with a value
-    # if plc.isReady():
-    #     pygame.event.post(pygame.event.Event(PLC_GET))
+    # plc_data = plc.read()
+    # pygame.event.post(pygame.event.Event(PLC_GET))
 
     displaysurface.fill((255, 255, 255))
     score.update()
@@ -101,6 +105,6 @@ while running:
     gameTime.tick(FPS)
 
 # Maybe move these cleanup tasks to a function
-# plc.end()
+plc.end()
 pygame.quit()
 sys.exit()
