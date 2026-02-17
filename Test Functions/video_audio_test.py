@@ -34,9 +34,9 @@ while True:
             if keys[K_d]:
                 cheer.play()
             if keys[K_ESCAPE]:
-                pygame.quit()
+                pygame.event.post(pygame.event.Event(QUIT))
         
-        video.handle_event(event)
+        # video.handle_event(event)
     
     displaysurface.fill((255, 255, 255))
 
