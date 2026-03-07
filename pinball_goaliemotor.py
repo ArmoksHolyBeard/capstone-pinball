@@ -7,27 +7,28 @@ There are microstepping options but this iis probably not worth it for this proj
 TODO: Some sort of step tracking and integration with the two switches to determine goalie position
 '''
 import time
-# import pigpio
+import board
+import digitalio
 
 # Pin definitions
-DIR_PIN = 12
-STEP_PIN = 16
+DIR_PIN = board.D23
+STEP_PIN = board.D24
 RIGHT_SENSOR = 13
 LEFT_SENSOR = 15
 
-# Motor directions
-RIGHT = 1
-LEFT = 0
+# # Motor directions
+# RIGHT = 1
+# LEFT = 0
 
 # Time delay between steps in ms
 STEP_DELAY = 0.010
 TRIGGER_PULSE_TIME = 0.00001
 
 # Pin setup
-# pi.set_mode(DER_PIN, pigpio.OUTPUT)
-# pi.set_mode(STEP_PIN, pigpio.OUTPUT)
-# pi.set_mode(RIGHT_SENSOR, pigpio.INPUT)
-# pi.set_mode(LEFT_SENSOR, pigpio.INPUT)
+rightPin = digitalio.DigitalInOut(DIR_PIN)
+rightPin.direction = digitalio.Direction.OUTPUT
+stepPin = digitalio.DigitalInOut(STEP_PIN)
+stepPin.direction = digitalio.Direction.OUTPUT
 
 # Count tracking
 count = 0
@@ -35,10 +36,16 @@ right_limit = 0
 left_left = 0
 
 def step_once():
-    # pi.write(STEP_PIN, 1)
+    stepPin.value = True
     # The A4988 has a minimum pulse width of 1 microsecond for the high-low, we'll use 10
     time.sleep(TRIGGER_PULSE_TIME)
-    # pi.write(STEP_PIN, 0)
+    stepPin.value = False
+
+def setDirection(d):
+    if d == 'CW':
+        rightPin.value = True
+    if d == 'CCW':
+        rightPin.value = False
 
 def index_motor():
     # Set the motor direction
@@ -63,4 +70,9 @@ def index_motor():
 
 if __name__ == "__main__":
     # Test stuff
-    pass
+    directions = ['CW', 'CCW']
+    for d in directions:
+        setDirection(d)
+        for i in range(1000):
+            step_once()
+            time.sleep(STEP_DELAY)
