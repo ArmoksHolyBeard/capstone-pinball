@@ -13,6 +13,7 @@ import digitalio
 # Pin definitions
 DIR_PIN = board.D23
 STEP_PIN = board.D24
+EN_PIN = board.D6
 RIGHT_SENSOR = 13
 LEFT_SENSOR = 15
 
@@ -21,14 +22,16 @@ LEFT_SENSOR = 15
 # LEFT = 0
 
 # Time delay between steps in ms
-STEP_DELAY = 0.010
-TRIGGER_PULSE_TIME = 0.00001
+STEP_DELAY = 0.1
+TRIGGER_PULSE_TIME = 0.1
 
 # Pin setup
 rightPin = digitalio.DigitalInOut(DIR_PIN)
 rightPin.direction = digitalio.Direction.OUTPUT
 stepPin = digitalio.DigitalInOut(STEP_PIN)
 stepPin.direction = digitalio.Direction.OUTPUT
+enable  = digitalio.DigitalInOut(EN_PIN)
+enable.direction = digitalio.Direction.OUTPUT
 
 # Count tracking
 count = 0
@@ -38,8 +41,9 @@ left_left = 0
 def step_once():
     stepPin.value = True
     # The A4988 has a minimum pulse width of 1 microsecond for the high-low, we'll use 10
-    time.sleep(TRIGGER_PULSE_TIME)
+    time.sleep(0.2)
     stepPin.value = False
+    time.sleep(0.8)
 
 def setDirection(d):
     if d == 'CW':
@@ -70,9 +74,12 @@ def index_motor():
 
 if __name__ == "__main__":
     # Test stuff
+    enable.value = False
     directions = ['CW', 'CCW']
     for d in directions:
         setDirection(d)
-        for i in range(1000):
+        for i in range(10):
             step_once()
-            time.sleep(STEP_DELAY)
+            #time.sleep(STEP_DELAY)
+    enable.value = True
+    
