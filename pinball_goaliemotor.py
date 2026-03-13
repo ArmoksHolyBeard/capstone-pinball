@@ -11,9 +11,9 @@ import board
 import digitalio
 
 # Pin definitions
-DIR_PIN = board.D23
-STEP_PIN = board.D24
-EN_PIN = board.D6
+DIR_PIN = board.D5
+STEP_PIN = board.D6
+EN_PIN = board.D16
 RIGHT_SENSOR = 13
 LEFT_SENSOR = 15
 
