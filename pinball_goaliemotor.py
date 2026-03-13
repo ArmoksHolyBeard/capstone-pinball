@@ -11,72 +11,74 @@ import time
 import board
 import digitalio
 
-# Pin definitions
-DIR_PIN = board.D23
-STEP_PIN = board.D24
-EN_PIN = board.D6
-RIGHT_SENSOR = 13
-LEFT_SENSOR = 15
-
-# # Motor directions
-# RIGHT = 1
-# LEFT = 0
-
 # Time delay between steps in ms
 STEP_DELAY = 0.1
 TRIGGER_PULSE_TIME = 0.1
 
 # Pin setup
-rightPin = digitalio.DigitalInOut(DIR_PIN)
-rightPin.direction = digitalio.Direction.OUTPUT
-stepPin = digitalio.DigitalInOut(STEP_PIN)
-stepPin.direction = digitalio.Direction.OUTPUT
-enable  = digitalio.DigitalInOut(EN_PIN)
-enable.direction = digitalio.Direction.OUTPUT
+dir_pin = digitalio.DigitalInOut(board.D5)
+dir_pin.switch_to_output()
+# dir_pin.direction = digitalio.Direction.OUTPUT
+
+step_pin = digitalio.DigitalInOut(board.D6)
+step_pin.switch_to_output()
+# step_pin.direction = digitalio.Direction.OUTPUT
+
+enable  = digitalio.DigitalInOut(board.D16)
+enable.switch_to_output()
+# enable.direction = digitalio.Direction.OUTPUT
+
+right_sensor = digitalio.DigitalInOut(board.D13)
+right_sensor.switch_to_input()
+# right_sensor = digitalio.Direction.INPUT
+
+left_sensor = digitalio.DigitalInOut(board.D12)
+left_sensor.switch_to_input()
+# left_sensor = digitalio.Direction.INPUT
 
 # Count tracking
 count = 0
-right_limit = 0
-left_left = 0
+right_step_limit = 0
+left_step_left = 0
 
 def step_once():
-    stepPin.value = True
+    step_pin.value = True
     # The A4988 has a minimum pulse width of 1 microsecond for the high-low
     time.sleep(0.2)
-    stepPin.value = False
+    step_pin.value = False
     time.sleep(0.8)
 
 def setDirection(d):
-    if d == 'CW':
-        rightPin.value = True
-    if d == 'CCW':
-        rightPin.value = False
+    if d == 'R':
+        dir_pin.value = True
+    if d == 'L':
+        dir_pin.value = False
 
 def index_motor():
-    # Set the motor direction
-    # pi.write(DIR_PIN, RIGHT)
-    running = True
-    while running:
+    enable.value = True
+
+    # Get the right side limit
+    setDirection('R')
+    while running := (not right_sensor.value):
         step_once()
         count += 1
         time.sleep(STEP_DELAY)
-        # running = not pi.read(RIGHT_SENSOR)
-    right_limit = count
+    right_step_limit = count
     
     # Get the left limit
-    # pi.write(DIR_PIN, LEFT)
-    running = True
-    while running:
+    setDirection('L')
+    while running := (not left_sensor.value):
         step_once()
         count -= 1
         time.sleep(STEP_DELAY)
-        # running = not pi.read(LEFT_SENSOR)
-    left_left = count
+    left_step_left = count
+
+    enable.value = False
 
 if __name__ == "__main__":
     # Test stuff
     enable.value = False
-    for d in (directions := ['CW', 'CCW']):
+    for d in (directions := ['R', 'L']):
         setDirection(d)
         for i in range(10):
             step_once()
