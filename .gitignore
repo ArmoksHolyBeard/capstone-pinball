@@ -1,6 +1,6 @@
 # Log Files #
-*.txt
+#*.txt
 
 # Video/Audio #
-*.mp4
-*.wav
+#*.mp4
+#*.wav
