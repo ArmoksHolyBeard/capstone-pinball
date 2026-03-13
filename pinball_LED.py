@@ -65,7 +65,7 @@ class LightSegment():
 
     def __bullet(self):
         self.__clear()
-        self.leds[0] = 0xCC4400
+        self.leds[0] = 0xAA3300
         while True:
             yield self.leds
             self.__shiftRight()
@@ -74,7 +74,7 @@ class LightSegment():
         self.__clear()
         while True:
             yield self.leds
-            self.leds = [0x00AA77-led for led in self.leds]
+            self.leds = [0x004422-led for led in self.leds]
 
     def __alternate(self):
         pass
@@ -92,7 +92,7 @@ class LightController():
     def write(self):
         ''' Write all segments to the LED strip '''
         for segment in self.segments:
-            self.colors[segment.startIndex:segment.endIndex+1] = segment.getState()
+            self.colors[segment.startIndex:segment.endIndex+1] = segment.get_state()
         self.pixels[:] = self.colors
         self.pixels.show()
 
@@ -104,6 +104,7 @@ if __name__ == "__main__":
 
     for i in range(80):
         allLights.write()
+        sleep(0.025)
     
     seg1.begin_sequence('bullet')
     seg2.begin_sequence('blink')
@@ -111,11 +112,13 @@ if __name__ == "__main__":
 
     for i in range(160):
         allLights.write()
+        sleep(0.025)
     
     seg1.begin_sequence('blink')
 
     for i in range(80):
         allLights.write()
+        sleep(0.025)
     
     seg1.begin_sequence('off')
     seg2.begin_sequence('off')
