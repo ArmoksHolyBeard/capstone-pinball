@@ -5,6 +5,7 @@ A rising edge on the step input moves the motor one step.
 There are microstepping options but this iis probably not worth it for this project
 
 TODO: Some sort of step tracking and integration with the two switches to determine goalie position
+TODO: Will probably have to make this a coroutine
 '''
 import time
 import board
@@ -40,7 +41,7 @@ left_left = 0
 
 def step_once():
     stepPin.value = True
-    # The A4988 has a minimum pulse width of 1 microsecond for the high-low, we'll use 10
+    # The A4988 has a minimum pulse width of 1 microsecond for the high-low
     time.sleep(0.2)
     stepPin.value = False
     time.sleep(0.8)
@@ -75,11 +76,9 @@ def index_motor():
 if __name__ == "__main__":
     # Test stuff
     enable.value = False
-    directions = ['CW', 'CCW']
-    for d in directions:
+    for d in (directions := ['CW', 'CCW']):
         setDirection(d)
         for i in range(10):
             step_once()
             #time.sleep(STEP_DELAY)
     enable.value = True
-    

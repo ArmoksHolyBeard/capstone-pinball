@@ -28,10 +28,11 @@ allTags = [
     RAMP_SPINNER,
     STANDING_TARGETS
 ]
+# Associate tags with IDs (used in main game loop)
 tagNames = {
-    BUMPER_01: 'bumper_1',
-    BUMPER_02: 'bumper_2',
-    BUMPER_03: 'bumper_3',
+    BUMPER_01: 'bumper1',
+    BUMPER_02: 'bumper2',
+    BUMPER_03: 'bumper3',
     DROP_TARGETS: 'dropTargets',
     GOAL: 'goal',
     KICKBACK: 'kickback',
@@ -69,9 +70,10 @@ class PinballPLC():
     def resetTags(self):
         request = [(tag, 0) for tag in allTags]
         response = self.plc.Write(request)
-        # print(response)
+        # TODO: Error checking on response
 
 if __name__ == "__main__":
     testPLC = PinballPLC()
     print(testPLC.read())
     testPLC.resetTags()
+    testPLC.end()

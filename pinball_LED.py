@@ -1,11 +1,11 @@
-# import board
-# import neopixel
+import board
+import neopixel
 
 # Set the total number of LEDs in the chain
 NUM_LEDS = 240
 
 # Initialize the LEDs
-# pixels = neopixel.NeoPixel(board.D21, NUM_LEDS, auto_write=False)
+pixels = neopixel.NeoPixel(board.D10, NUM_LEDS, auto_write=False)
 
 class LightSegment():
     ''' Object for storing the led state and modulating it for various light shows '''
@@ -18,12 +18,12 @@ class LightSegment():
         ''' Return the tuple color values of the LEDs in the segment '''
         return [self._parseHex(h) for h in self.leds]
     
-    def _parseHex(self, hexValue):
+    def _parseHex(self, hexValue: int):
         ''' Turn a hex value into a tuple of ints '''
         r = int(hexValue >> 16 & 0xFF)
         g = int(hexValue >> 8 & 0xFF)
         b = int(hexValue & 0xFF)
-        return (r, g, b)
+        return r, g, b
     
     def blink(self):
         pass
@@ -39,8 +39,8 @@ class LightController():
         for segment in self.segments:
             self.colors[segment.startIndex:segment.endIndex] = segment.getState()
         print(self.colors)
-        # pixels[:] = self.colors
-        # pixels.show()
+        pixels[:] = self.colors
+        pixels.show()
 
 if __name__ == "__main__":
     seg1 = LightSegment(11, 25)
