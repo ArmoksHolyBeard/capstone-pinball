@@ -2,53 +2,66 @@ import board
 import neopixel
 from time import sleep
 
-# Set the total number of LEDs in the chain
 NUM_LEDS = 50
 
 class LightSegment():
     ''' Object for storing the led state and modulating it for various light shows '''
-    def __init__(self, startIndex: int, endIndex: int=None):
-        self.startIndex = startIndex
-        self.endIndex = endIndex if endIndex else startIndex
-        self.leds = [0 for i in range(self.startIndex, self.endIndex+1)]
-        self.sequence = self.__off()
+    def __init__(self, start_index: int, end_index: int=None):
+        self.start_index = start_index
+        self.end_index = end_index if end_index else start_index
+        self.segment_length = end_index - start_index + 1
+        self.leds = [0x000000 for i in range(self.start_index, self.end_index+1)]
+        self.sequence = self._off()
     
     def __repr__(self):
-        return f'LightSegment from {self.startIndex} to {self.endIndex} containing {self.__parse_hex_sequence(self.leds)}'
+        return f'LightSegment from {self.start_index} to {self.end_index}' \
+               f' containing {self._parse_hex_sequence(self.leds)}'
     
     def get_state(self):
-        return self.__parse_hex_sequence(next(self.sequence))
+        ''' Return the RGB values of the segment '''
+        return self._parse_hex_sequence(next(self.sequence))
     
-    def begin_sequence(self, newSequence: str):
+    def begin_sequence(self,
+                       new_sequence: str,
+                       color: int = 0x7F7F7F,
+                       delay=0):
+        """ Set the sequence to be run on the light segment. Optionally
+            pass an RGB color in hex format and a delay as a number of 
+            frames to be skipped before updating. Sequence options: 
+            "off" "solid" "bullet" "blink" "alternate" "meteor" "random"
+        """
         self.sequence.close()
-        match newSequence:
+        match new_sequence:
             case 'off':
-                self.sequence = self.__off()
+                self.sequence = self._off()
+            case 'solid':
+                self.sequence = self._solid(color)
             case 'bullet':
-                self.sequence = self.__bullet()
+                self.sequence = self._bullet(color, delay)
             case 'blink':
-                self.sequence = self.__blink()
+                self.sequence = self._blink(color, delay)
             case 'alternate':
-                self.sequence = self.__alternate()
+                self.sequence = self._alternate(color, delay)
+            case _:
+                self.sequence = self._off()
 
-    def __parse_hex(self, hexValue: int):
+    def _parse_hex(self, hexValue: int):
         ''' Turn a hex value into a tuple of ints '''
         r = int(hexValue >> 16 & 0xFF)
         g = int(hexValue >> 8 & 0xFF)
         b = int(hexValue & 0xFF)
         return r, g, b
     
-    def __parse_hex_sequence(self, hexes: list):
-        return [self.__parse_hex(h) for h in hexes]
+    def _parse_hex_sequence(self, hexes: list):
+        return [self._parse_hex(h) for h in hexes]
     
-    def __clear(self):
-        self.leds = [0 for led in self.leds]
+    def _fill(self, color: int):
+        self.leds = [color for led in self.leds]
     
-    def __shiftRight(self, places: int = 1, rotate: bool = True):
+    def _shiftRight(self, places: int = 1, rotate: bool = True):
         new_leds = self.leds.copy()
-        length = len(self.leds)
-        end = length - 1
-        places = places % length
+        end = self.end_index
+        places = places % self.segment_length
         if places > 0:
             if rotate:
                 new_leds[:places] = self.leds[end-places+1:end+1]
@@ -58,43 +71,64 @@ class LightSegment():
                 new_leds[places:] = self.leds[:end-rotate+1]
             self.leds = new_leds
     
-    def __off(self):
-        while True:
-            self.__clear()
-            yield self.leds
-
-    def __bullet(self):
-        self.__clear()
-        self.leds[0] = 0xAA3300
-        while True:
-            yield self.leds
-            self.__shiftRight()
+    def _delay(self, frames: int):
+        if frames > 0:
+            for i in range(frames):
+                yield self.leds
     
-    def __blink(self):
-        self.__clear()
+    def _off(self):
+        self._fill(0x000000)
         while True:
             yield self.leds
-            self.leds = [0x004422-led for led in self.leds]
 
-    def __alternate(self):
+    def _bullet(self, color: int, delay: int):
+        self._fill(0x000000)
+        self.leds[0] = color
+        while True:
+            yield self.leds
+            for buffer in self._delay(delay):
+                yield buffer
+            self._shiftRight()
+    
+    def _blink(self, color: int, delay: int):
+        self._fill(0x000000)
+        while True:
+            yield self.leds
+            for buffer in self._delay(delay):
+                yield buffer
+            self.leds = [color-current_color for current_color in self.leds]
+    
+    def _solid(self, color: int):
+        self._fill(color)
+        while True:
+            yield self.leds
+
+    def _alternate(self, color: int, delay: int):
         pass
 
-    def __rand_noise(self):
+    def _meteor(self, color: int, delay: int):
         pass
+
+    def _rand_noise(self, color: int, delay: int):
+        pass
+
 
 class LightController():
     ''' Object for holding and displaying the various sequences during the game. '''
     def __init__(self, *segments: LightSegment):
         self.segments = segments
         self.colors = [0 for i in range(NUM_LEDS)]
-        self.pixels = neopixel.NeoPixel(board.D10, NUM_LEDS, auto_write=False)
+        self.pixels = neopixel.NeoPixel(board.D10,
+                                        NUM_LEDS,
+                                        auto_write=False)
     
     def write(self):
         ''' Write all segments to the LED strip '''
         for segment in self.segments:
-            self.colors[segment.startIndex:segment.endIndex+1] = segment.get_state()
+            self.colors[segment.start_index:segment.end_index+1] = segment.get_state()
         self.pixels[:] = self.colors
         self.pixels.show()
+
 
 if __name__ == "__main__":
     seg1 = LightSegment(0, 9)
