@@ -1,4 +1,5 @@
 ''' The set of functions for communicating with the PLC'''
+from queue import Queue
 
 from pylogix import PLC
 
@@ -43,8 +44,9 @@ tagNames = {
 
 class PinballPLC():
 
-    def __init__(self):
-        self.plc = PLC(IP)
+    def __init__(self, data_q: Queue, /, *, demo_mode=False):
+        self.data_q = data_q
+        self.plc = PLC(IP) if not demo_mode else None
         self.tagValues = {
             'bumper_1': 0,
             'bumper_2': 0,
@@ -56,21 +58,30 @@ class PinballPLC():
             'rampSpinner': 0,
             'standingTargets': 0
         }
+        self.demo_mode = demo_mode
     
     def end(self):
-        self.plc.Close()
+        if not self.demo_mode:
+            self.plc.Close()
     
-    # Plan is to make this asynchronous using asyncio, if I can get that working
     def read(self):
-        current_tags = self.plc.Read(allTags)
-        for tag in current_tags:
-            self.tagValues[tagNames[tag.TagName]] = tag.Value
+        if not self.demo_mode:
+            current_tags = self.plc.Read(allTags)
+            for tag in current_tags:
+                self.tagValues[tagNames[tag.TagName]] = tag.Value
         return self.tagValues
     
     def resetTags(self):
-        request = [(tag, 0) for tag in allTags]
-        response = self.plc.Write(request)
-        # TODO: Error checking on response
+        if not self.demo_mode:
+            request = [(tag, 0) for tag in allTags]
+            response = self.plc.Write(request)
+            # TODO: Error checking on response
+    
+    def read_loop(self):
+        # TODO: Error handling and exit condition
+        while True:
+            self.data_q.put(self.read())
+            self.resetTags()
 
 if __name__ == "__main__":
     testPLC = PinballPLC()
