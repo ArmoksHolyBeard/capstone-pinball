@@ -15,6 +15,11 @@ TRIGGER_PULSE_TIME = 0.000005
 FAST_STEP = 0.000010
 SLOW_STEP = 0.000020
 
+# Linear direction of the goalie
+RIGHT = False
+LEFT = True
+
+# 3200 counts is one full rotation
 
 class MotorController:
 
@@ -22,8 +27,8 @@ class MotorController:
     PAUSE = 1
     DEFEND = 2
     
-    dir_pin = digitalio.DigitalInOut(board.D5)
-    dir_pin.switch_to_output()
+    direction_pin = digitalio.DigitalInOut(board.D5)
+    direction_pin.switch_to_output()
 
     step_pin = digitalio.DigitalInOut(board.D6)
     step_pin.switch_to_output()
@@ -37,55 +42,63 @@ class MotorController:
     left_sensor = digitalio.DigitalInOut(board.D12)
     left_sensor.switch_to_input()
     
-    def __init__(self, data_q: Queue):
-        self.data_q = data_q
+    def __init__(self, cmd_q: Queue):
+        self.cmd_q = cmd_q
         self.count = 0
         self.right_step_limit = 0
         self.left_step_left = 0
-        self.state = self.disable_motor()
+        self.direction = LEFT
+        self.state = self._disable_motor()
         self.endpoints_set = False
 
-    def step_once(self):
-        self.step_pin.value = True
-        time.sleep(TRIGGER_PULSE_TIME)
-        self.step_pin.value = False
-        time.sleep(TRIGGER_PULSE_TIME)
+    def _step_once(self):
+        if self.direction == RIGHT:
+            self.count += 1
+        elif self.direction == LEFT:
+            self.count -= 1
+        
+        if not (
+            self.endpoints_set
+            and (
+                self.count >= self.right_step_limit
+                or self.count <= self.right_step_limit
+            )
+        ):
+            self.step_pin.value = True
+            time.sleep(TRIGGER_PULSE_TIME)
+            self.step_pin.value = False
+            time.sleep(TRIGGER_PULSE_TIME)
 
-    def set_direction(self, direction: str):
-        """ Options are 'R' and 'L' """
-        if direction == 'R':
-            self.dir_pin.value = True
-        if direction == 'L':
-            self.dir_pin.value = False
+    def _set_direction(self, new_direction: int):
+        self.direction = new_direction
+        self.direction_pin.value = self.direction
 
-    def index_motor(self):
+    def _index_motor(self):
         self.disable.value = True
 
         # Get the right side limit
-        self.set_direction('R')
+        self._set_direction(RIGHT)
         while not self.right_sensor.value:
-            self.step_once()
-            self.count += 1
+            self._step_once()
             time.sleep(FAST_STEP)
             yield
         self.right_step_limit = self.count
         
         # Get the left limit
-        self.set_direction('L')
+        self._set_direction(LEFT)
         while not self.left_sensor.value:
-            self.step_once()
-            self.count -= 1
+            self._step_once()
             time.sleep(FAST_STEP)
             yield
         self.left_step_left = self.count
         self.endpoints_set = True
 
-    def disable_motor(self):
+    def _disable_motor(self):
         self.disable.value = True
         while True:
             yield
     
-    def defend(self):
+    def _defend(self):
         self.disable.value = False
         while True:
             yield
@@ -98,13 +111,13 @@ class MotorController:
                 self.state.close()
                 match next_state:
                     case self.INDEX:
-                        self.state = self.index_motor()
+                        self.state = self._index_motor()
                     case self.PAUSE:
-                        self.state = self.disable_motor()
+                        self.state = self._disable_motor()
                     case self.DEFEND if self.endpoints_set:
-                        self.state = self.defend()
+                        self.state = self._defend()
                     case _:
-                        self.state = self.disable_motor()
+                        self.state = self._disable_motor()
             else:
                 next(self.state)
 
@@ -112,13 +125,15 @@ class MotorController:
 if __name__ == "__main__":
     q = Queue()
     motor = MotorController(q)
+    motor.disable.value = False
     for i in range(4):
-        motor.set_direction('R')
+        motor._set_direction(RIGHT)
         for j in range(800):
-            motor.step_once()
+            motor._step_once()
             time.sleep(SLOW_STEP)
-        motor.set_direction('L')
+        motor._set_direction(LEFT)
         for k in range(400):
-            motor.step_once()
+            motor._step_once()
             time.sleep(FAST_STEP)
+    motor.disable.value = True
 
