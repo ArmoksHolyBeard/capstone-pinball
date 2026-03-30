@@ -1,5 +1,6 @@
 ''' The set of functions for communicating with the PLC'''
 from queue import Queue
+from time import sleep
 
 from pylogix import PLC
 
@@ -44,8 +45,9 @@ tagNames = {
 
 class PinballPLC():
 
-    def __init__(self, data_q: Queue, /, *, demo_mode=False):
+    def __init__(self, data_q: Queue, cmd_q: Queue, /, *, demo_mode=False):
         self.data_q = data_q
+        self.cmd_q = cmd_q
         self.plc = PLC(IP) if not demo_mode else None
         self.tagValues = {
             'bumper_1': 0,
@@ -60,18 +62,18 @@ class PinballPLC():
         }
         self.demo_mode = demo_mode
     
-    def end(self):
+    def _end(self):
         if not self.demo_mode:
             self.plc.Close()
     
-    def read(self):
+    def _read(self):
         if not self.demo_mode:
             current_tags = self.plc.Read(allTags)
             for tag in current_tags:
                 self.tagValues[tagNames[tag.TagName]] = tag.Value
         return self.tagValues
     
-    def resetTags(self):
+    def _resetTags(self):
         if not self.demo_mode:
             request = [(tag, 0) for tag in allTags]
             response = self.plc.Write(request)
@@ -80,11 +82,18 @@ class PinballPLC():
     def read_loop(self):
         # TODO: Error handling and exit condition
         while True:
-            self.data_q.put(self.read())
-            self.resetTags()
+            # Check the command queue
+            if not self.cmd_q.empty():
+                if self.cmd_q.get() == "quit":
+                    self._end()
+                    return
+            sleep(0.1)
+            if not self.demo_mode:
+                self.data_q.put(self._read())
+            self._resetTags()
 
 if __name__ == "__main__":
     testPLC = PinballPLC()
-    print(testPLC.read())
-    testPLC.resetTags()
-    testPLC.end()
+    print(testPLC._read())
+    testPLC._resetTags()
+    testPLC._end()
