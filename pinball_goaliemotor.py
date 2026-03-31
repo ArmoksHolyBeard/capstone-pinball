@@ -23,9 +23,10 @@ LEFT = True
 
 class MotorController:
 
-    INDEX = 0
-    PAUSE = 1
-    DEFEND = 2
+    EXIT = 0
+    INDEX = 1
+    PAUSE = 2
+    DEFEND = 3
     
     direction_pin = digitalio.DigitalInOut(board.D5)
     direction_pin.switch_to_output()
@@ -48,7 +49,7 @@ class MotorController:
         self.right_step_limit = 0
         self.left_step_left = 0
         self.direction = LEFT
-        self.state = self._disable_motor()
+        self.state = self._pause_motor()
         self.endpoints_set = False
 
     def _step_once(self):
@@ -93,7 +94,7 @@ class MotorController:
         self.left_step_left = self.count
         self.endpoints_set = True
 
-    def _disable_motor(self):
+    def _pause_motor(self):
         self.disable.value = True
         while True:
             yield
@@ -104,20 +105,25 @@ class MotorController:
             yield
     
     def run_motor(self):
-        # TODO: Error handling and exit condition
+        # TODO: Error handling
         while True:
-            if not self.data_q.empty():
-                next_state = self.data_q.get()
+            if not self.cmd_q.empty():
+                next_state = self.cmd_q.get() # Maybe set a timeout with exception handling?
                 self.state.close()
                 match next_state:
+                    case self.EXIT:
+                        # Turn off the motor driver and return so the
+                        # thread manager can properly close out the thread
+                        self.disable.value = True
+                        return
                     case self.INDEX:
                         self.state = self._index_motor()
                     case self.PAUSE:
-                        self.state = self._disable_motor()
+                        self.state = self._pause_motor()
                     case self.DEFEND if self.endpoints_set:
                         self.state = self._defend()
                     case _:
-                        self.state = self._disable_motor()
+                        self.state = self._pause_motor()
             else:
                 next(self.state)
 
