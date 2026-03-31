@@ -1,6 +1,11 @@
 # Log Files #
 #*.txt
+*.log
 
 # Video/Audio #
 #*.mp4
 #*.wav
+
+# Cache
+__pycache__
+*.pyc
