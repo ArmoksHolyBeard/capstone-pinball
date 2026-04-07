@@ -38,10 +38,10 @@ class MotorController:
     disable.switch_to_output()
 
     right_sensor = digitalio.DigitalInOut(board.D13)
-    right_sensor.switch_to_input()
+    right_sensor.switch_to_input(digitalio.Pull.DOWN)
 
     left_sensor = digitalio.DigitalInOut(board.D12)
-    left_sensor.switch_to_input()
+    left_sensor.switch_to_input(digitalio.Pull.DOWN)
     
     def __init__(self, cmd_q: Queue):
         self.cmd_q = cmd_q
@@ -71,7 +71,7 @@ class MotorController:
                 time.sleep(TRIGGER_PULSE_TIME)
     
     def _safe_step_once(self):
-        if not (self.right_sensor or self.left_sensor):
+        if not (self.right_sensor.value or self.left_sensor.value):
             if self.direction == RIGHT:
                 self.count += 1
             elif self.direction == LEFT:
@@ -149,18 +149,23 @@ if __name__ == "__main__":
     q = Queue()
     motor = MotorController(q)
     motor.disable.value = False
-    directions = [RIGHT, LEFT]
-    for direction in directions:
-        print(f"Moving {direction=}...")
-        motor._set_direction(direction)
-        decision = input("Move half turn?\n")
-        if decision == "q":
-            continue
-        for i in range(1600):
-            if not motor._safe_step_once():
-                print("Limit reached")
-                break
-            time.sleep(SLOW_STEP)
-        print(f"Count: {motor.count}")
+    # directions = [RIGHT, LEFT]
+    # for direction in directions:
+        # print(f"Moving {direction=}...")
+        # for j in range(8):
+            # motor._set_direction(direction)
+            # decision = input("Move quarter turn?\n")
+            # if decision == "q":
+                # break
+            # for i in range(800):
+                # if not motor._safe_step_once():
+                    # print("Limit reached")
+                    # break
+                # time.sleep(SLOW_STEP)
+            # print(f"Count: {motor.count}")
+    motor.disable.value = True
+    for i in range(20):
+        print(f"{motor.right_sensor.value} {motor.left_sensor.value}")
+        time.sleep(0.5)
 
 
