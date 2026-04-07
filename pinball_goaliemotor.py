@@ -52,43 +52,56 @@ class MotorController:
         self.state = self._pause_motor()
         self.endpoints_set = False
 
+        # Default motor to off
+        self.disable.value = True
+
     def _step_once(self):
         if self.direction == RIGHT:
             self.count += 1
         elif self.direction == LEFT:
             self.count -= 1
         
-        if not (
-            self.endpoints_set
-            and (
-                self.count >= self.right_step_limit
-                or self.count <= self.right_step_limit
-            )
+        if (self.endpoints_set
+            and (self.count >= self.right_step_limit 
+                 or self.count <= self.right_step_limit)
         ):
+                self.step_pin.value = True
+                time.sleep(TRIGGER_PULSE_TIME)
+                self.step_pin.value = False
+                time.sleep(TRIGGER_PULSE_TIME)
+    
+    def _safe_step_once(self):
+        if not (self.right_sensor or self.left_sensor):
+            if self.direction == RIGHT:
+                self.count += 1
+            elif self.direction == LEFT:
+                self.count -= 1
+
             self.step_pin.value = True
             time.sleep(TRIGGER_PULSE_TIME)
             self.step_pin.value = False
             time.sleep(TRIGGER_PULSE_TIME)
+            return True
+        else:
+            return False
 
     def _set_direction(self, new_direction: int):
         self.direction = new_direction
         self.direction_pin.value = self.direction
 
     def _index_motor(self):
-        self.disable.value = True
+        self.disable.value = False
 
         # Get the right side limit
         self._set_direction(RIGHT)
-        while not self.right_sensor.value:
-            self._step_once()
+        while not self._safe_step_once():
             time.sleep(FAST_STEP)
             yield
         self.right_step_limit = self.count
         
         # Get the left limit
         self._set_direction(LEFT)
-        while not self.left_sensor.value:
-            self._step_once()
+        while not self._safe_step_once():
             time.sleep(FAST_STEP)
             yield
         self.left_step_left = self.count
@@ -125,21 +138,29 @@ class MotorController:
                     case _:
                         self.state = self._pause_motor()
             else:
-                next(self.state)
+                try:
+                    next(self.state)
+                except StopIteration:
+                    self.state.close()
+                    self.state = self._pause_motor()
 
 
 if __name__ == "__main__":
     q = Queue()
     motor = MotorController(q)
     motor.disable.value = False
-    for i in range(4):
-        motor._set_direction(RIGHT)
-        for j in range(800):
-            motor._step_once()
+    directions = [RIGHT, LEFT]
+    for direction in directions:
+        print(f"Moving {direction=}...")
+        motor._set_direction(direction)
+        decision = input("Move half turn?\n")
+        if decision == "q":
+            continue
+        for i in range(1600):
+            if not motor._safe_step_once():
+                print("Limit reached")
+                break
             time.sleep(SLOW_STEP)
-        motor._set_direction(LEFT)
-        for k in range(400):
-            motor._step_once()
-            time.sleep(FAST_STEP)
-    motor.disable.value = True
+        print(f"Count: {motor.count}")
+
 
