@@ -69,16 +69,16 @@ class PinballManager:
         self.standing_target_count = 0
         
         # Set up LED segments
-        self.left_side_lights = LightSegment(0, 50)
-        self.left_deadlane_lights = LightSegment(51, 57)
-        self.left_slingshot_lights = LightSegment(58, 59)
-        self.ramp_lights = LightSegment(60, 67)
-        self.goal_lights = LightSegment(68, 75)
-        self.rear_lights = LightSegment(76, 95)
-        self.right_side_lights = LightSegment(96, 145)
-        self.right_deadlane_lights = LightSegment(146, 152)
-        self.right_slingshot_lights = LightSegment(153, 154)
-        self.freekick_lights = LightSegment(155, 166)
+        self.left_side_lights = LightSegment(0, 54)
+        self.left_deadlane_lights = LightSegment(55, 61)
+        self.left_slingshot_lights = LightSegment(62, 63)
+        self.ramp_lights = LightSegment(64, 73)
+        self.goal_lights = LightSegment(74, 87)
+        self.rear_lights = LightSegment(88, 120)
+        self.right_side_lights = LightSegment(121, 175)
+        self.right_deadlane_lights = LightSegment(176, 182)
+        self.right_slingshot_lights = LightSegment(183, 184)
+        self.freekick_lights = LightSegment(185, 199)
 
         self.ledController = LightController(
             self.left_side_lights,
@@ -159,6 +159,7 @@ class PinballManager:
     def _quit_game(self):
         self.cmd_q.put(PinballPLC.QUIT)
         self.motor_q.put(MotorController.EXIT)
+        self.ledController.stop()
         for video in self.videos:
             video.close()
         pygame.mixer.quit()
@@ -179,6 +180,17 @@ class PinballManager:
         pygame.mixer.music.load("C:/dev/pinball/capstone-pinball/media/bertsz_drum_and_bass.ogg")
         pygame.mixer.music.set_volume(0.2)
         pygame.mixer.music.play(-1)
+
+        self.left_side_lights.begin_sequence("solid", 0x726C00)
+        self.left_deadlane_lights.begin_sequence("solid", 0x726C00)
+        self.left_slingshot_lights.begin_sequence("bullet", 0x726C00, 2)
+        self.ramp_lights.begin_sequence("bullet", 0x726C00, 2)
+        self.goal_lights.begin_sequence("blink", 0x726C00, 15)
+        self.rear_lights.begin_sequence("solid", 0x726C00)
+        self.right_side_lights.begin_sequence("solid", 0x726C00)
+        self.right_deadlane_lights.begin_sequence("bullet", 0x726C00, 2)
+        self.right_slingshot_lights.begin_sequence("solid", 0x726C00)
+        self.freekick_lights.begin_sequence("blink", 0x726C00, 15)
 
         pygame.time.set_timer(self.TIMER_EVENT, 1000)
 
@@ -221,6 +233,8 @@ class PinballManager:
                     plc_data = {}
 
             # Play sounds, animations, display high scores
+            self.ledController.write()
+
             self.screen.blits([
                 (self.background, (0, 0)),
                 (title_text, (500, 230)),
@@ -308,6 +322,8 @@ class PinballManager:
                     plc_data = {}
 
             # Render the background and screen elements
+            self.ledController.write()
+
             self.screen.blit(self.background)
             self.score.update()
             self.lives.update()
@@ -368,6 +384,8 @@ class PinballManager:
                     plc_data = {}
             
             # Play sounds, animations, display high scores
+            self.ledController.write()
+
             self.screen.blits([
                 (self.background, (0, 0)),
                 (bonus_text, (500, 230))
@@ -415,6 +433,8 @@ class PinballManager:
                     plc_data = {}
 
             # Display game over, high scores
+            self.ledController.write()
+
             self.screen.blits([
                 (self.background, (0, 0)),
                 (gameover_text, (500, 230))
