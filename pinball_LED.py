@@ -2,7 +2,7 @@ import board
 import neopixel
 from time import sleep
 
-NUM_LEDS = 50
+NUM_LEDS = 200
 
 class LightSegment():
     ''' Object for storing the led state and modulating it for various light shows '''
@@ -127,6 +127,10 @@ class LightController():
         for segment in self.segments:
             self.colors[segment.start_index:segment.end_index+1] = segment.get_state()
         self.pixels[:] = self.colors
+        self.pixels.show()
+
+    def stop(self):
+        self.pixels.fill((0, 0, 0))
         self.pixels.show()
 
 
