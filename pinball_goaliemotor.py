@@ -5,6 +5,8 @@ A rising edge on the step input moves the motor one step.
 There are microstepping options but this iis probably not worth it for this project
 '''
 import time
+import math
+from random import randint
 from queue import Queue
 
 import board
@@ -47,7 +49,7 @@ class MotorController:
         self.cmd_q = cmd_q
         self.count = 0
         self.right_step_limit = 0
-        self.left_step_left = 0
+        self.left_step_limit = 0
         self.direction = LEFT
         self.state = self._pause_motor()
         self.endpoints_set = False
@@ -95,16 +97,22 @@ class MotorController:
         # Get the right side limit
         self._set_direction(RIGHT)
         while not self._safe_step_once():
-            time.sleep(FAST_STEP)
+            time.sleep(SLOW_STEP)
             yield
         self.right_step_limit = self.count
         
         # Get the left limit
         self._set_direction(LEFT)
         while not self._safe_step_once():
-            time.sleep(FAST_STEP)
+            time.sleep(SLOW_STEP)
             yield
-        self.left_step_left = self.count
+        self.left_step_limit = self.count
+
+        # Make the center zero
+        count_total = self.right_step_limit - self.left_step_limit
+        self.right_step_limit = count_total // 2
+        self.left_step_limit = -self.right_step_limit
+
         self.endpoints_set = True
 
     def _pause_motor(self):
@@ -115,7 +123,16 @@ class MotorController:
     def _defend(self):
         self.disable.value = False
         while True:
-            yield
+            target = randint(0, self.right_step_limit)
+            if self.count > 0:
+                self._set_direction(LEFT)
+                target = -target
+            else:
+                self._set_direction(RIGHT)
+            while self.count != target:
+                self._safe_step_once()
+                time.sleep(FAST_STEP)
+                yield
     
     def run_motor(self):
         # TODO: Error handling

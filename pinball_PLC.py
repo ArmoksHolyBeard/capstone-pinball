@@ -106,16 +106,21 @@ class PinballPLC():
                 self._resetTags()
 
 if __name__ == "__main__":
-    test_Q1 = Queue()
-    test_Q2 = Queue()
-    test_PLC = PinballPLC(test_Q1, test_Q2)
-    print(test_PLC._read())
-    print(test_PLC._resetTags())
-    print()
-    if (input("Continue? y/n ")).upper() == "Y":
-        for i in range(20):
-            for tag, value in test_PLC._read().items():
-                print(f"{tag}: {value}")
-            print()
-            sleep(0.5)
-    test_PLC._end()
+    with PLC() as thing:
+        devices = thing.Discover()
+        for device in devices.Value:
+            print(device)
+
+    # test_Q1 = Queue()
+    # test_Q2 = Queue()
+    # test_PLC = PinballPLC(test_Q1, test_Q2)
+    # print(test_PLC._read())
+    # print(test_PLC._resetTags())
+    # print()
+    # if (input("Continue? y/n ")).upper() == "Y":
+    #     for i in range(20):
+    #         for tag, value in test_PLC._read().items():
+    #             print(f"{tag}: {value}")
+    #         print()
+    #         sleep(0.5)
+    # test_PLC._end()

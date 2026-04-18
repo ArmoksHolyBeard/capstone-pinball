@@ -4,7 +4,7 @@ import random
 
 import pygame
 from pygame.locals import *
-import pygvideo
+from pyvidplayer2 import Video
 
 from pinball_LED import LightController, LightSegment
 from pinball_PLC import PinballPLC
@@ -35,6 +35,9 @@ class Score:
     
     def addPoints(self, points: int):
         self.points += points
+    
+    def reset(self):
+        self.points = 0
 
 
 class Lives:
@@ -56,20 +59,38 @@ class Lives:
 class PinballManager:
     FPS = 30
 
+    """ Primary methods """
     def __init__(self, data_q: Queue, cmd_q: Queue, motor_q: Queue):
         self.data_q = data_q
         self.cmd_q = cmd_q
         self.motor_q = motor_q
         self.plc_data = {}
+        self.drop_target_count = 0
+        self.standing_target_count = 0
         
         # Set up LED segments
-        self.goalLights = LightSegment(20, 29)
-        self.slingshotLight_left = LightSegment(2)
-        self.slingshotLight_right = LightSegment(3)
+        self.left_side_lights = LightSegment(0, 54)
+        self.left_deadlane_lights = LightSegment(55, 61)
+        self.left_slingshot_lights = LightSegment(62, 63)
+        self.ramp_lights = LightSegment(64, 73)
+        self.goal_lights = LightSegment(74, 87)
+        self.rear_lights = LightSegment(88, 120)
+        self.right_side_lights = LightSegment(121, 175)
+        self.right_deadlane_lights = LightSegment(176, 182)
+        self.right_slingshot_lights = LightSegment(183, 184)
+        self.freekick_lights = LightSegment(185, 199)
+
         self.ledController = LightController(
-            self.goalLights,
-            self.slingshotLight_left,
-            self.slingshotLight_right
+            self.left_side_lights,
+            self.left_deadlane_lights,
+            self.left_slingshot_lights,
+            self.ramp_lights,
+            self.goal_lights,
+            self.rear_lights,
+            self.right_side_lights,
+            self.right_deadlane_lights,
+            self.right_slingshot_lights,
+            self.freekick_lights
         )
 
     def run_game(self):
@@ -81,11 +102,11 @@ class PinballManager:
         self.game_time = pygame.time.Clock()
 
         # Initialize the window to fullscreen
-        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        self.screen = pygame.display.set_mode((1600, 900))#, pygame.FULLSCREEN)
         pygame.display.set_caption("Pinball Test")
 
         # Set up background
-        self.background = pygame.image.load("media\munich_stadium.jpg")
+        self.background = pygame.image.load("C:/dev/pinball/capstone-pinball/media\munich_stadium.jpg")
         self.background.convert()
 
         # Initialize display objects
@@ -94,24 +115,24 @@ class PinballManager:
 
         # Initialize audio clips
         self.cheers = [
-            pygame.mixer.Sound("media/cheer1.wav"),
-            pygame.mixer.Sound("media/cheer2.ogg"),
-            pygame.mixer.Sound("media/cheer3.ogg"),
-            pygame.mixer.Sound("media/cheer4.ogg"),
-            pygame.mixer.Sound("media/cheer5.ogg")
+            pygame.mixer.Sound("C:/dev/pinball/capstone-pinball/media/cheer1.wav"),
+            pygame.mixer.Sound("C:/dev/pinball/capstone-pinball/media/cheer2.ogg"),
+            pygame.mixer.Sound("C:/dev/pinball/capstone-pinball/media/cheer3.ogg"),
+            pygame.mixer.Sound("C:/dev/pinball/capstone-pinball/media/cheer4.ogg"),
+            pygame.mixer.Sound("C:/dev/pinball/capstone-pinball/media/cheer5.ogg")
         ]
         for clip in self.cheers:
             clip.set_volume(0.2)
-        self.ding = pygame.mixer.Sound("media/ding.wav")
+        self.ding = pygame.mixer.Sound("C:/dev/pinball/capstone-pinball/media/ding.wav")
 
         # Initialize videos clips
         self.videos = [
-            pygvideo.Video("media/messi_score.mp4"),
-            pygvideo.Video("media/weissbach_ref.mp4")
+            Video("C:/dev/pinball/capstone-pinball/media/messi_score.mp4"),
+            Video("C:/dev/pinball/capstone-pinball/media/weissbach_ref.mp4")
         ]
         for video in self.videos:
-            video.set_size(self.screen.get_size())
-        # self.video2.set_size([608, self.screen.get_size()[1]])
+            video.set_volume(0.1)
+            video.stop()
 
         # Set up custom events
         self.TIMER_EVENT = pygame.USEREVENT + 0
@@ -134,10 +155,13 @@ class PinballManager:
             if game_state == GameState.GAME_OVER:
                 game_state = self._game_over()
     
+    """ Game state methods """
     def _quit_game(self):
-        self.cmd_q.put("quit")
-        # self.motor_q.put(MotorController.EXIT)
-        pygvideo.quit_all()
+        self.cmd_q.put(PinballPLC.QUIT)
+        self.motor_q.put(MotorController.EXIT)
+        self.ledController.stop()
+        for video in self.videos:
+            video.close()
         pygame.mixer.quit()
         pygame.quit()
         return
@@ -153,9 +177,20 @@ class PinballManager:
         title_text = title_font.render("World Cup Pinball", True, (40, 40, 40))
         pressme_text = pressme_font.render("Press Start", True, (60, 30, 60))
 
-        pygame.mixer.music.load("media/bertsz_drum_and_bass.ogg")
+        pygame.mixer.music.load("C:/dev/pinball/capstone-pinball/media/bertsz_drum_and_bass.ogg")
         pygame.mixer.music.set_volume(0.2)
         pygame.mixer.music.play(-1)
+
+        self.left_side_lights.begin_sequence("solid", 0x726C00)
+        self.left_deadlane_lights.begin_sequence("solid", 0x726C00)
+        self.left_slingshot_lights.begin_sequence("bullet", 0x726C00, 2)
+        self.ramp_lights.begin_sequence("bullet", 0x726C00, 2)
+        self.goal_lights.begin_sequence("blink", 0x726C00, 15)
+        self.rear_lights.begin_sequence("solid", 0x726C00)
+        self.right_side_lights.begin_sequence("solid", 0x726C00)
+        self.right_deadlane_lights.begin_sequence("bullet", 0x726C00, 2)
+        self.right_slingshot_lights.begin_sequence("solid", 0x726C00)
+        self.freekick_lights.begin_sequence("blink", 0x726C00, 15)
 
         pygame.time.set_timer(self.TIMER_EVENT, 1000)
 
@@ -198,6 +233,8 @@ class PinballManager:
                     plc_data = {}
 
             # Play sounds, animations, display high scores
+            self.ledController.write()
+
             self.screen.blits([
                 (self.background, (0, 0)),
                 (title_text, (500, 230)),
@@ -211,8 +248,12 @@ class PinballManager:
         # Return END_OF_BALL if drain, GAME_OVER if esc
 
         # Initialize screen elements
-        pygame.time.set_timer(self.TIMER_EVENT, 0)
         plc_data = {}
+
+        # Set a 10 sec grace period
+        pygame.time.set_timer(self.TIMER_EVENT, 0)
+        grace = True
+
         while True:
 
             # Post event when PLC comms returns with a value
@@ -229,7 +270,7 @@ class PinballManager:
                 
                 if event.type == self.TIMER_EVENT:
                     # self.cmd_q.put(PinballPLC.UNLOCK)
-                    self.score.addPoints(1000)
+                    grace = False
                     pygame.time.set_timer(self.TIMER_EVENT, 0)
 
                 # Handles any key presses
@@ -239,10 +280,22 @@ class PinballManager:
                         pygame.event.post(pygame.event.Event(QUIT))
                     if keys[K_f]:
                         self._play_video(0)
-                        pygame.time.set_timer(self.TIMER_EVENT, int(self.videos[0].get_duration()+500))
+                    if keys[K_g]:
+                        self._play_video(1)
+                    if keys[K_r]:
+                        self.score.addPoints(20000)
+                        self.drop_target_count += 1
+                    if keys[K_t]:
+                        self.score.addPoints(1000)
+                        self.standing_target_count += 1
+                    if keys[K_p]:
+                        self.lives.subtract_balls()
+                        return GameState.END_OF_BALL
                 
                 # Handles the PLC based events
                 if event.type == self.PLC_GET:
+                    if plc_data['launch']:
+                        pygame.time.set_timer(self.TIMER_EVENT, 10000)
                     if plc_data['bumper_1']:
                         self.score.addPoints(500)
                     if plc_data['bumper_2']:
@@ -251,30 +304,33 @@ class PinballManager:
                         self.score.addPoints(500)
                     if plc_data['dropTargets']:
                         self.score.addPoints(20000)
+                        self.drop_target_count += 1
                     if plc_data['goal']:
                         self.score.addPoints(1000000)
-                        self.video1.play()
+                        self._play_video(1)
                     if plc_data['kickback']:
                         self.score.addPoints(1)
-                    if plc_data['lives'] < self.lives.balls:
+                    if (plc_data['lives'] < self.lives.balls) and not grace:
                         self.lives.subtract_balls()
-                        # self.videos[2].play()
+                        return GameState.END_OF_BALL
                         # self.cmd_q.put(PinballPLC.LOCK)
-                        # pygame.time.set_timer(self.TIMER_EVENT, int(self.videos[2].get_duration()))
                     if plc_data['rampSpinner']:
                         self.score.addPoints(100)
                     if plc_data['standingTargets']:
                         self.score.addPoints(1000)
+                        self.standing_target_count += 1
                     plc_data = {}
 
             # Render the background and screen elements
+            self.ledController.write()
+
             self.screen.blit(self.background)
             self.score.update()
             self.lives.update()
 
             for video in self.videos:
-                if video.is_play:
-                    video.draw_and_update(self.screen, (0, 0))
+                if video.active:
+                    video.draw(self.screen, (0, 0))
             
             # print(self.game_time.get_fps()) # FPS Counter
             
@@ -284,9 +340,59 @@ class PinballManager:
     def _end_of_ball(self):
         # return IN_PLAY when sequence ends, GAME_OVER if out of balls
         # Initialize screen elements
-        # while True:
-            # Display end of ball bonus and total
-        pass
+        bonus_font = pygame.font.Font(size=128)
+        bonus_points = (self.standing_target_count+1) * 500
+        bonus_mult = self.drop_target_count + 1
+        bonus_text = bonus_font.render(f"{bonus_points} x {bonus_mult} = {bonus_points*bonus_mult}", True, (40, 40, 40))
+
+        # Display for 5 seconds
+        pygame.time.set_timer(self.TIMER_EVENT, 3000)
+
+        plc_data = {}
+
+        while True:
+            # Post event when PLC comms returns with a value
+            if not self.data_q.empty():
+                plc_data = self.data_q.get()
+                pygame.event.post(pygame.event.Event(self.PLC_GET))
+            
+            # Check all pygame events
+            for event in pygame.event.get():
+                # Quit the game
+                if event.type == QUIT:
+                    return GameState.GAME_OVER
+                
+                if event.type == self.TIMER_EVENT:
+                    self.score.addPoints(bonus_points*bonus_mult)
+                    self.standing_target_count = 0
+                    self.drop_target_count = 0
+                    if self.lives.balls <= 0:
+                        return GameState.GAME_OVER
+                    else:
+                        return GameState.IN_PLAY
+                
+                # Handles any key presses
+                if event.type == pygame.KEYDOWN:
+                    keys = pygame.key.get_pressed()
+                    if keys[K_ESCAPE]:
+                        pygame.event.post(pygame.event.Event(QUIT))
+
+                # Handles the PLC based events
+                if event.type == self.PLC_GET:
+                    if plc_data['start_button']:
+                        return GameState.IN_PLAY
+                    plc_data = {}
+            
+            # Play sounds, animations, display high scores
+            self.ledController.write()
+
+            self.screen.blits([
+                (self.background, (0, 0)),
+                (bonus_text, (500, 230))
+            ])
+
+            pygame.display.flip()
+            self.game_time.tick(self.FPS)
 
     def _game_over(self):
         # return ATTRACT after a period of time, IN_PLAY if start button pressed, QUIT if esc
@@ -294,6 +400,8 @@ class PinballManager:
         # Initialize screen elements
         gameover_font = pygame.font.Font(size=128)
         gameover_text = gameover_font.render("Game Over", True, (40, 40, 40))
+
+        self.score.reset()
 
         plc_data = {}
 
@@ -325,6 +433,8 @@ class PinballManager:
                     plc_data = {}
 
             # Display game over, high scores
+            self.ledController.write()
+
             self.screen.blits([
                 (self.background, (0, 0)),
                 (gameover_text, (500, 230))
@@ -333,11 +443,12 @@ class PinballManager:
             pygame.display.flip()
             self.game_time.tick(self.FPS)
     
+    """ Helper methods """
     def _play_video(self, index: int):
         for video in self.videos:
-            if video.is_ready:
-                video.restop()
-        self.videos[index].preplay()
+            if video.active:
+                video.stop()
+        self.videos[index].play()
         
 
 if __name__ == "__main__":
