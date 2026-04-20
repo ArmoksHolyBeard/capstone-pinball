@@ -60,11 +60,12 @@ class PinballManager:
     FPS = 30
 
     """ Primary methods """
-    def __init__(self, data_q: Queue, cmd_q: Queue, motor_q: Queue):
-        self.data_q = data_q
-        self.cmd_q = cmd_q
-        self.motor_q = motor_q
+    def __init__(self, plc_data_q: Queue, plc_cmd_q: Queue, motor_data_q: Queue, motor_cmd_q: Queue):
+        self.plc_data_q = plc_data_q
+        self.plc_cmd_q = plc_cmd_q
         self.plc_data = {}
+        self.motor_data_q = motor_data_q
+        self.motor_cmd_q = motor_cmd_q
         self.drop_target_count = 0
         self.standing_target_count = 0
         
@@ -137,6 +138,7 @@ class PinballManager:
         # Set up custom events
         self.TIMER_EVENT = pygame.USEREVENT + 0
         self.PLC_GET = pygame.USEREVENT + 1
+        self.MOTOR_GET = pygame.USEREVENT + 2
 
         # Loop through possible gamestates
         game_state = GameState.INIT
@@ -157,8 +159,8 @@ class PinballManager:
     
     """ Game state methods """
     def _quit_game(self):
-        self.cmd_q.put(PinballPLC.QUIT)
-        self.motor_q.put(MotorController.EXIT)
+        self.plc_cmd_q.put(PinballPLC.QUIT)
+        self.motor_cmd_q.put(MotorController.EXIT)
         self.ledController.stop()
         for video in self.videos:
             video.close()
@@ -167,7 +169,32 @@ class PinballManager:
         return
 
     def _system_init(self):
-        return GameState.ATTRACT
+        init_font = pygame.font.Font(size=32)
+        init_text = init_font.render("Initializing...", True, (0, 0, 0))
+
+        # Tell the motor to index the endpoints
+        self.motor_cmd_q.put(MotorController.INDEX)
+
+        # Tell the PLC to lock
+
+        while True:         
+            # Check the state of the motor
+            if not self.motor_data_q.empty():
+                motor_status = self.motor_data_q.get()
+                pygame.event.post(pygame.event.Event(self.MOTOR_GET))
+            
+            # Check all pygame events
+            for event in pygame.event.get():
+                # Handle the motor based events
+                if event.type == self.MOTOR_GET:
+                    if motor_status == "DONE":
+                        return GameState.ATTRACT
+
+            self.screen.fill((0, 0, 0))
+            self.screen.blit(init_text, (0, 0))
+
+            pygame.display.flip()
+            self.game_time.tick(self.FPS)
 
     def _attract_screen(self):
         # Initialize screen elements
@@ -199,8 +226,8 @@ class PinballManager:
         while True:
 
             # Post event when PLC comms returns with a value
-            if not self.data_q.empty():
-                plc_data = self.data_q.get()
+            if not self.plc_data_q.empty():
+                plc_data = self.plc_data_q.get()
                 pygame.event.post(pygame.event.Event(self.PLC_GET))
             
             # Check all pygame events
@@ -257,8 +284,8 @@ class PinballManager:
         while True:
 
             # Post event when PLC comms returns with a value
-            if not self.data_q.empty():
-                plc_data = self.data_q.get()
+            if not self.plc_data_q.empty():
+                plc_data = self.plc_data_q.get()
                 pygame.event.post(pygame.event.Event(self.PLC_GET))
 
             # Check all pygame events
@@ -269,7 +296,7 @@ class PinballManager:
                     return GameState.GAME_OVER # Change to GAME_OVER later
                 
                 if event.type == self.TIMER_EVENT:
-                    # self.cmd_q.put(PinballPLC.UNLOCK)
+                    # self.plc_cmd_q.put(PinballPLC.UNLOCK)
                     grace = False
                     pygame.time.set_timer(self.TIMER_EVENT, 0)
 
@@ -313,7 +340,7 @@ class PinballManager:
                     if (plc_data['lives'] < self.lives.balls) and not grace:
                         self.lives.subtract_balls()
                         return GameState.END_OF_BALL
-                        # self.cmd_q.put(PinballPLC.LOCK)
+                        # self.plc_cmd_q.put(PinballPLC.LOCK)
                     if plc_data['rampSpinner']:
                         self.score.addPoints(100)
                     if plc_data['standingTargets']:
@@ -352,8 +379,8 @@ class PinballManager:
 
         while True:
             # Post event when PLC comms returns with a value
-            if not self.data_q.empty():
-                plc_data = self.data_q.get()
+            if not self.plc_data_q.empty():
+                plc_data = self.plc_data_q.get()
                 pygame.event.post(pygame.event.Event(self.PLC_GET))
             
             # Check all pygame events
@@ -408,8 +435,8 @@ class PinballManager:
         while True:
 
             # Post event when PLC comms returns with a value
-            if not self.data_q.empty():
-                plc_data = self.data_q.get()
+            if not self.plc_data_q.empty():
+                plc_data = self.plc_data_q.get()
                 pygame.event.post(pygame.event.Event(self.PLC_GET))
             
             # Check all pygame events

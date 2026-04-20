@@ -45,7 +45,8 @@ class MotorController:
     left_sensor = digitalio.DigitalInOut(board.D12)
     left_sensor.switch_to_input()
     
-    def __init__(self, cmd_q: Queue):
+    def __init__(self, data_q: Queue, cmd_q: Queue):
+        self.data_q = data_q
         self.cmd_q = cmd_q
         self.count = 0
         self.right_step_limit = 0
@@ -133,6 +134,7 @@ class MotorController:
             yield
         
         self.endpoints_set = True
+        self.data_q.put("DONE")
 
     def _pause_motor(self):
         self.disable.value = True
