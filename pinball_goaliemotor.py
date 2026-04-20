@@ -4,7 +4,7 @@ This only uses two data pins, one for direction and one for step.
 A rising edge on the step input moves the motor one step.
 There are microstepping options but this iis probably not worth it for this project
 '''
-import time
+from time import sleep
 import math
 from random import randint
 from queue import Queue
@@ -63,14 +63,10 @@ class MotorController:
         elif self.direction == LEFT:
             self.count -= 1
         
-        if (self.endpoints_set
-            and (self.count >= self.right_step_limit 
-                 or self.count <= self.right_step_limit)
-        ):
-                self.step_pin.value = True
-                time.sleep(TRIGGER_PULSE_TIME)
-                self.step_pin.value = False
-                time.sleep(TRIGGER_PULSE_TIME)
+        self.step_pin.value = True
+        sleep(TRIGGER_PULSE_TIME)
+        self.step_pin.value = False
+        sleep(TRIGGER_PULSE_TIME)
     
     def _safe_step_once(self):
         if not (self.right_sensor.value or self.left_sensor.value):
@@ -80,9 +76,9 @@ class MotorController:
                 self.count -= 1
 
             self.step_pin.value = True
-            time.sleep(TRIGGER_PULSE_TIME)
+            sleep(TRIGGER_PULSE_TIME)
             self.step_pin.value = False
-            time.sleep(TRIGGER_PULSE_TIME)
+            sleep(TRIGGER_PULSE_TIME)
             return True
         else:
             return False
@@ -97,22 +93,45 @@ class MotorController:
         # Get the right side limit
         self._set_direction(RIGHT)
         while not self._safe_step_once():
-            time.sleep(SLOW_STEP)
+            sleep(SLOW_STEP)
             yield
         self.right_step_limit = self.count
-        
-        # Get the left limit
+        print(f"Right count limit: {self.right_step_limit}")
+
+        # Move a quarter turn back from the sensor
         self._set_direction(LEFT)
+        for i in range(800):
+            self._step_once()
+            sleep(FAST_STEP)
+            yield
+        sleep(1)
+
+        # Get the left limit
         while not self._safe_step_once():
-            time.sleep(SLOW_STEP)
+            sleep(SLOW_STEP)
             yield
         self.left_step_limit = self.count
+        print(f"Left count limit: {self.left_step_limit}")
+
+        # Move a quarter turn back from the sensor
+        self._set_direction(RIGHT)
+        for i in range(800):
+            self._step_once()
+            sleep(FAST_STEP)
+            yield
+        sleep(1)
 
         # Make the center zero
         count_total = self.right_step_limit - self.left_step_limit
         self.right_step_limit = count_total // 2
         self.left_step_limit = -self.right_step_limit
 
+        print("Moving to center")
+        while self.count != 0:
+            self._step_once()
+            sleep(SLOW_STEP)
+            yield
+        
         self.endpoints_set = True
 
     def _pause_motor(self):
@@ -123,7 +142,7 @@ class MotorController:
     def _defend(self):
         self.disable.value = False
         while True:
-            target = randint(0, self.right_step_limit)
+            target = randint(self.left_step_limit+800, self.right_step_limit-800)
             if self.count > 0:
                 self._set_direction(LEFT)
                 target = -target
@@ -131,7 +150,7 @@ class MotorController:
                 self._set_direction(RIGHT)
             while self.count != target:
                 self._safe_step_once()
-                time.sleep(FAST_STEP)
+                sleep(SLOW_STEP)
                 yield
     
     def run_motor(self):
@@ -165,19 +184,18 @@ class MotorController:
 if __name__ == "__main__":
     q = Queue()
     motor = MotorController(q)
-    motor.disable.value = False
-    directions = [RIGHT, LEFT]
-    for direction in directions:
-        print(f"Moving {direction=}...")
-        motor._set_direction(direction)
-        decision = input("Move half turn?\n")
-        if decision == "q":
-            continue
-        for i in range(1600):
-            if not motor._safe_step_once():
-                print("Limit reached")
-                break
-            time.sleep(SLOW_STEP)
-        print(f"Count: {motor.count}")
+    input("Enter to continue...")
+    motor.state = motor._index_motor()
+    while True:
+        try:
+            next(motor.state)
+        except StopIteration:
+            motor.state.close()
+            state = motor._pause_motor()
+            break
+    motor.state = motor._defend()
+    for i in range(65535):
+        next(motor.state)
 
-
+    motor.state.close()
+    motor.disable.value = True
