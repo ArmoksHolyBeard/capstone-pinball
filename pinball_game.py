@@ -1,5 +1,6 @@
 from enum import Enum
 from queue import Queue
+from datetime import datetime
 import random
 
 import pygame
@@ -272,14 +273,12 @@ class PinballManager:
             self.game_time.tick(self.FPS)
     
     def _in_play(self):
-        # Return END_OF_BALL if drain, GAME_OVER if esc
 
-        # Initialize screen elements
         plc_data = {}
-
-        # Set a 10 sec grace period
-        pygame.time.set_timer(self.TIMER_EVENT, 0)
         grace = True
+        ball_in_play = False
+        hat_trick_count = 0
+        pygame.time.set_timer(self.TIMER_EVENT, 0)
 
         while True:
 
@@ -293,10 +292,10 @@ class PinballManager:
 
                 # Quit the game
                 if event.type == QUIT:  
-                    return GameState.GAME_OVER # Change to GAME_OVER later
+                    return GameState.GAME_OVER
                 
+                # End the grace period after the timer
                 if event.type == self.TIMER_EVENT:
-                    # self.plc_cmd_q.put(PinballPLC.UNLOCK)
                     grace = False
                     pygame.time.set_timer(self.TIMER_EVENT, 0)
 
@@ -305,47 +304,50 @@ class PinballManager:
                     keys = pygame.key.get_pressed()
                     if keys[K_ESCAPE]:
                         pygame.event.post(pygame.event.Event(QUIT))
-                    if keys[K_f]:
-                        self._play_video(0)
-                    if keys[K_g]:
-                        self._play_video(1)
-                    if keys[K_r]:
-                        self.score.addPoints(20000)
-                        self.drop_target_count += 1
-                    if keys[K_t]:
-                        self.score.addPoints(1000)
-                        self.standing_target_count += 1
-                    if keys[K_p]:
-                        self.lives.subtract_balls()
-                        return GameState.END_OF_BALL
                 
                 # Handles the PLC based events
                 if event.type == self.PLC_GET:
-                    if plc_data['launch']:
+                    if not ball_in_play and plc_data['lives'] > 0:
+                        ball_in_play = True
+                        # kickoff sound/video
                         pygame.time.set_timer(self.TIMER_EVENT, 10000)
-                    if plc_data['bumper_1']:
-                        self.score.addPoints(500)
-                    if plc_data['bumper_2']:
-                        self.score.addPoints(500)
-                    if plc_data['bumper_3']:
-                        self.score.addPoints(500)
-                    if plc_data['dropTargets']:
-                        self.score.addPoints(20000)
-                        self.drop_target_count += 1
-                    if plc_data['goal']:
-                        self.score.addPoints(1000000)
-                        self._play_video(1)
-                    if plc_data['kickback']:
-                        self.score.addPoints(1)
-                    if (plc_data['lives'] < self.lives.balls) and not grace:
-                        self.lives.subtract_balls()
-                        return GameState.END_OF_BALL
-                        # self.plc_cmd_q.put(PinballPLC.LOCK)
-                    if plc_data['rampSpinner']:
-                        self.score.addPoints(100)
-                    if plc_data['standingTargets']:
-                        self.score.addPoints(1000)
+                    if ball_in_play and plc_data['lives'] < 1:
+                        if grace:
+                            # try again sound/video
+                            ball_in_play = False
+                        else:
+                            self.lives.subtract_balls()
+                            # self.plc_cmd_q.put(PinballPLC.LOCK)
+                            return GameState.END_OF_BALL
+                    if (hit_count := plc_data['bumper_1']) > 0:
+                        self.score.addPoints(1000*hit_count)
+                    if (hit_count := plc_data['bumper_2']) > 0:
+                        self.score.addPoints(1000*hit_count)
+                    if (hit_count := plc_data['bumper_3']) > 0:
+                        self.score.addPoints(1000*hit_count)
+                    if (hit_count := plc_data['standing_targets']) > 0:
+                        random.choice(self.cheers).play()
+                        self.score.addPoints(10000*hit_count)
                         self.standing_target_count += 1
+                    if (hit_count := plc_data['ramp_spinner']) > 0:
+                        # ramp sound
+                        self.score.addPoints(20000*hit_count)
+                    if (hit_count := plc_data['drop_targets']) > 0:
+                        # flag sound/video
+                        self.score.addPoints(60000*hit_count)
+                        self.drop_target_count += 1
+                    if plc_data['kickback'] > 0:
+                        # throw-in sound/video
+                        self.score.addPoints(250000)
+                    if plc_data['goal'] > 0:
+                        if hat_trick_count >= 3:
+                            # hat trick sound/video
+                            self.lives.balls += 1
+                            hat_trick_count = 0
+                        else:
+                            # goal sound/video
+                            hat_trick_count += 1
+                        self.score.addPoints(1000000)
                     plc_data = {}
 
             # Render the background and screen elements
@@ -374,6 +376,9 @@ class PinballManager:
 
         # Display for 5 seconds
         pygame.time.set_timer(self.TIMER_EVENT, 3000)
+
+        # Play failure video
+        # self._play_video(1)
 
         plc_data = {}
 
@@ -406,8 +411,6 @@ class PinballManager:
 
                 # Handles the PLC based events
                 if event.type == self.PLC_GET:
-                    if plc_data['start_button']:
-                        return GameState.IN_PLAY
                     plc_data = {}
             
             # Play sounds, animations, display high scores
@@ -427,6 +430,14 @@ class PinballManager:
         # Initialize screen elements
         gameover_font = pygame.font.Font(size=128)
         gameover_text = gameover_font.render("Game Over", True, (40, 40, 40))
+
+        # Save score to high score log
+        highscores = []
+        with open("high_score.txt", "a") as file:
+            file.write(f"{self.score.points}, Date: {datetime.now()}")
+        with open("high_score.txt") as file:
+            for line in file:
+                highscores.append(line)
 
         self.score.reset()
 
