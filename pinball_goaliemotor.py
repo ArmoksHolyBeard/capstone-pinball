@@ -5,7 +5,7 @@ A rising edge on the step input moves the motor one step.
 There are microstepping options but this iis probably not worth it for this project
 '''
 from time import sleep
-import math
+# import math
 from random import randint
 from queue import Queue
 
@@ -184,8 +184,9 @@ class MotorController:
 
 
 if __name__ == "__main__":
-    q = Queue()
-    motor = MotorController(q)
+    q1 = Queue()
+    q2 = Queue()
+    motor = MotorController(q1, q2)
     input("Enter to continue...")
     motor.state = motor._index_motor()
     while True:

@@ -21,7 +21,7 @@ motor_cmd_q = Queue()
 game = PinballManager(plc_data_q, plc_cmd_q, motor_data_q, motor_cmd_q)
 
 # Set up PLC comms
-plc = PinballPLC(plc_data_q, plc_cmd_q) #demo_mode=True
+plc = PinballPLC(plc_data_q, plc_cmd_q)
 
 # Set up goalie motor controls
 motor = MotorController(motor_data_q, motor_cmd_q)

@@ -21,6 +21,7 @@ GOAL = "Program:MainProgram.GC.ACC"
 # TODO: Tags for system enable, start button, maybe flippers
 SYSTEM_ENABLE = "foo"
 FREE_KICK = "bar"
+START_BUTTON = "quux"
 
 # Create list of tags
 score_tags = [
@@ -46,6 +47,8 @@ all_tags = [
 ]
 # Associate tags with IDs (used in main game loop)
 tag_names = {
+    SYSTEM_ENABLE: "system_enable",
+    START_BUTTON: "start_button",
     IN_PLAY: 'in_play',
     BUMPER_01: 'bumper1',
     BUMPER_02: 'bumper2',
@@ -54,6 +57,7 @@ tag_names = {
     RAMP_SPINNER: 'ramp_spinner',
     DROP_TARGETS: 'drop_targets',
     KICKBACK: 'kickback',
+    FREE_KICK: "free_kick",
     GOAL: 'goal'
 }
 
@@ -68,6 +72,8 @@ class PinballPLC():
         self.cmd_q = cmd_q
         self.plc = PLC(IP)
         self.tag_values = {
+            'system_enable': 0,
+            'start_button': 0,
             'in_play': 0,
             'bumper_1': 0,
             'bumper_2': 0,
@@ -76,6 +82,7 @@ class PinballPLC():
             'ramp_spinner': 0,
             'drop_targets': 0,
             'kickback': 0,
+            'free_kick': 0,
             'goal': 0
         }
     
