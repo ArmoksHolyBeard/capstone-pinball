@@ -177,6 +177,7 @@ class PinballManager:
         self.motor_cmd_q.put(MotorController.INDEX)
 
         # Tell the PLC to lock
+        # self.plc_cmd_q.put(PinballPLC.LOCK)
 
         while True:         
             # Check the state of the motor
@@ -209,18 +210,26 @@ class PinballManager:
         pygame.mixer.music.set_volume(0.2)
         pygame.mixer.music.play(-1)
 
-        self.left_side_lights.begin_sequence("solid", 0x726C00)
-        self.left_deadlane_lights.begin_sequence("solid", 0x726C00)
-        self.left_slingshot_lights.begin_sequence("bullet", 0x726C00, 2)
-        self.ramp_lights.begin_sequence("bullet", 0x726C00, 2)
-        self.goal_lights.begin_sequence("blink", 0x726C00, 15)
-        self.rear_lights.begin_sequence("solid", 0x726C00)
-        self.right_side_lights.begin_sequence("solid", 0x726C00)
-        self.right_deadlane_lights.begin_sequence("bullet", 0x726C00, 2)
-        self.right_slingshot_lights.begin_sequence("solid", 0x726C00)
-        self.freekick_lights.begin_sequence("blink", 0x726C00, 15)
+        # Start some light shows
+        self.left_side_lights.begin_sequence("solid", 0x444444)
+        self.right_side_lights.begin_sequence("solid", 0x444444)
+        self.rear_lights.begin_sequence("solid", 0x444444)
 
+        self.left_deadlane_lights.begin_sequence("bullet", 0x004411, 2)
+        self.right_deadlane_lights.begin_sequence("bullet", 0x004411, 2)
+
+        self.left_slingshot_lights.begin_sequence("solid", 0x660000)
+        self.right_slingshot_lights.begin_sequence("solid", 0x660000)
+
+        self.ramp_lights.begin_sequence("bullet", 0x000077, 2)
+        self.goal_lights.begin_sequence("alternate", 0x440044, 15)
+        self.freekick_lights.begin_sequence("blink", 0x444400, 15)
+
+        
         pygame.time.set_timer(self.TIMER_EVENT, 1000)
+
+        # Tell the PLC to lock
+        # self.plc_cmd_q.put(PinballPLC.LOCK)
 
         plc_data = {}
 
@@ -237,7 +246,7 @@ class PinballManager:
                 if event.type == QUIT:
                     pygame.mixer.music.stop()
                     pygame.mixer.music.unload()
-                    return GameState.GAME_OVER # Change to GAME_OVER later
+                    return GameState.GAME_OVER
                 
                 if event.type == self.TIMER_EVENT:
                     sound = random.choice(self.cheers)
@@ -249,10 +258,6 @@ class PinballManager:
                     keys = pygame.key.get_pressed()
                     if keys[K_ESCAPE]:
                         pygame.event.post(pygame.event.Event(QUIT))
-                    if keys[K_SPACE]:
-                        pygame.mixer.music.stop()
-                        pygame.mixer.music.unload()
-                        return GameState.IN_PLAY
 
                 # Handles the PLC based events
                 if event.type == self.PLC_GET:
@@ -280,6 +285,12 @@ class PinballManager:
         hat_trick_count = 0
         pygame.time.set_timer(self.TIMER_EVENT, 0)
 
+        self.left_deadlane_lights.begin_sequence("bullet", 0x004411, 2)
+        self.right_deadlane_lights.begin_sequence("bullet", 0x004411, 2)
+
+        # Tell the PLC to unlock
+        # self.plc_cmd_q.put(PinballPLC.UNLOCK)
+
         while True:
 
             # Post event when PLC comms returns with a value
@@ -297,6 +308,8 @@ class PinballManager:
                 # End the grace period after the timer
                 if event.type == self.TIMER_EVENT:
                     grace = False
+                    self.left_deadlane_lights.begin_sequence("solid", 0x550011)
+                    self.right_deadlane_lights.begin_sequence("solid", 0x550011)
                     pygame.time.set_timer(self.TIMER_EVENT, 0)
 
                 # Handles any key presses

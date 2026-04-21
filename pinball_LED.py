@@ -23,7 +23,7 @@ class LightSegment():
     
     def begin_sequence(self,
                        new_sequence: str,
-                       color: int = 0x7F7F7F,
+                       color: int = 0x111111,
                        delay=0):
         """ Set the sequence to be run on the light segment. Optionally
             pass an RGB color in hex format and a delay as a number of 
@@ -58,24 +58,22 @@ class LightSegment():
     def _fill(self, color: int):
         self.leds = [color for led in self.leds]
     
-    def _shiftRight(self, places: int = 1, rotate: bool = True):
+    def _shift(self, backwards: bool = False, rotate: bool = True):
         new_leds = self.leds.copy()
-        end = self.end_index
-        places = places % self.segment_length
-        if places > 0:
-            if rotate:
-                new_leds[:places] = self.leds[end-places+1:end+1]
-                new_leds[places:] = self.leds[:end-rotate+1]
-            else:
-                new_leds[:places] = [0 for i in range(places)]
-                new_leds[places:] = self.leds[:end-rotate+1]
-            self.leds = new_leds
+        if backwards: # Shift left
+            new_leds[-1] = self.leds[0] if rotate else 0x000000
+            new_leds[:-1] = self.leds[1:]
+        else: # Shift right
+            new_leds[0] = self.leds[-1] if rotate else 0x000000
+            new_leds[1:] = self.leds[:-1]
+        self.leds = new_leds
     
     def _delay(self, frames: int):
         if frames > 0:
             for i in range(frames):
                 yield self.leds
     
+    """ Sequence methods """
     def _off(self):
         self._fill(0x000000)
         while True:
@@ -88,7 +86,7 @@ class LightSegment():
             yield self.leds
             for buffer in self._delay(delay):
                 yield buffer
-            self._shiftRight()
+            self._shift()
     
     def _blink(self, color: int, delay: int):
         self._fill(0x000000)
@@ -104,12 +102,23 @@ class LightSegment():
             yield self.leds
 
     def _alternate(self, color: int, delay: int):
-        pass
+        toggle_on = True
+        for led in self.leds:
+            led = color if toggle_on else 0x000000
+            toggle_on = not toggle_on
+        while True:
+            yield self.leds
+            for buffer in self._delay(delay):
+                yield buffer
+            self.leds = [color-current_color for current_color in self.leds]
 
     def _meteor(self, color: int, delay: int):
         pass
 
     def _rand_noise(self, color: int, delay: int):
+        pass
+
+    def _flood_fill(self, color: int, delay: int):
         pass
 
 
