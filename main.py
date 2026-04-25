@@ -14,16 +14,17 @@ from pinball_goaliemotor import MotorController
 # Create the data queues for PLC and motor controls
 plc_data_q = Queue()
 plc_cmd_q = Queue()
-motor_q = Queue()
+motor_data_q =Queue()
+motor_cmd_q = Queue()
 
 # Set up pinball game
-game = PinballManager(plc_data_q, plc_cmd_q, motor_q)
+game = PinballManager(plc_data_q, plc_cmd_q, motor_data_q, motor_cmd_q)
 
 # Set up PLC comms
-plc = PinballPLC(plc_data_q, plc_cmd_q, demo_mode=True) #demo_mode=True
+plc = PinballPLC(plc_data_q, plc_cmd_q)
 
 # Set up goalie motor controls
-motor = MotorController(motor_q)
+motor = MotorController(motor_data_q, motor_cmd_q)
 
 def thread_manager():
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as ex:
