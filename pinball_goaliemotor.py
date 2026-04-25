@@ -40,10 +40,10 @@ class MotorController:
     disable.switch_to_output()
 
     right_sensor = digitalio.DigitalInOut(board.D13)
-    right_sensor.switch_to_input()
+    right_sensor.switch_to_input(digitalio.Pull.DOWN)
 
     left_sensor = digitalio.DigitalInOut(board.D12)
-    left_sensor.switch_to_input()
+    left_sensor.switch_to_input(digitalio.Pull.DOWN)
     
     def __init__(self, data_q: Queue, cmd_q: Queue):
         self.data_q = data_q
