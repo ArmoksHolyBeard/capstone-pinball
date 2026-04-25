@@ -105,10 +105,10 @@ class PinballManager:
 
         # Initialize the window to fullscreen
         self.screen = pygame.display.set_mode((1600, 900))#, pygame.FULLSCREEN)
-        pygame.display.set_caption("Pinball Test")
+        pygame.display.set_caption("World Cup Pinball")
 
         # Set up background
-        self.background = pygame.image.load("C:/dev/pinball/capstone-pinball/media\munich_stadium.jpg")
+        self.background = pygame.image.load("/home/ian/capstone-pinball/media/munich_stadium.jpg")
         self.background.convert()
 
         # Initialize display objects
@@ -117,20 +117,20 @@ class PinballManager:
 
         # Initialize audio clips
         self.cheers = [
-            pygame.mixer.Sound("C:/dev/pinball/capstone-pinball/media/cheer1.wav"),
-            pygame.mixer.Sound("C:/dev/pinball/capstone-pinball/media/cheer2.ogg"),
-            pygame.mixer.Sound("C:/dev/pinball/capstone-pinball/media/cheer3.ogg"),
-            pygame.mixer.Sound("C:/dev/pinball/capstone-pinball/media/cheer4.ogg"),
-            pygame.mixer.Sound("C:/dev/pinball/capstone-pinball/media/cheer5.ogg")
+            pygame.mixer.Sound("/home/ian/capstone-pinball/media/cheer1.wav"),
+            pygame.mixer.Sound("/home/ian/capstone-pinball/media/cheer2.ogg"),
+            pygame.mixer.Sound("/home/ian/capstone-pinball/media/cheer3.ogg"),
+            pygame.mixer.Sound("/home/ian/capstone-pinball/media/cheer4.ogg"),
+            pygame.mixer.Sound("/home/ian/capstone-pinball/media/cheer5.ogg")
         ]
         for clip in self.cheers:
             clip.set_volume(0.2)
-        self.ding = pygame.mixer.Sound("C:/dev/pinball/capstone-pinball/media/ding.wav")
+        self.ding = pygame.mixer.Sound("/home/ian/capstone-pinball/media/ding.wav")
 
         # Initialize videos clips
         self.videos = [
-            Video("C:/dev/pinball/capstone-pinball/media/messi_score.mp4"),
-            Video("C:/dev/pinball/capstone-pinball/media/weissbach_ref.mp4")
+            Video("/home/ian/capstone-pinball/media/messi_score.mp4"),
+            Video("/home/ian/capstone-pinball/media/weissbach_ref.mp4")
         ]
         for video in self.videos:
             video.set_volume(0.1)
@@ -170,33 +170,34 @@ class PinballManager:
         return
 
     def _system_init(self):
-        init_font = pygame.font.Font(size=32)
-        init_text = init_font.render("Initializing...", True, (0, 0, 0))
-
-        # Tell the motor to index the endpoints
-        self.motor_cmd_q.put(MotorController.INDEX)
-
-        # Tell the PLC to lock
-        # self.plc_cmd_q.put(PinballPLC.LOCK)
-
-        while True:         
-            # Check the state of the motor
-            if not self.motor_data_q.empty():
-                motor_status = self.motor_data_q.get()
-                pygame.event.post(pygame.event.Event(self.MOTOR_GET))
-            
-            # Check all pygame events
-            for event in pygame.event.get():
-                # Handle the motor based events
-                if event.type == self.MOTOR_GET:
-                    if motor_status == "DONE":
-                        return GameState.ATTRACT
-
-            self.screen.fill((0, 0, 0))
-            self.screen.blit(init_text, (0, 0))
-
-            pygame.display.flip()
-            self.game_time.tick(self.FPS)
+        return GameState.ATTRACT
+#         init_font = pygame.font.Font(size=32)
+#         init_text = init_font.render("Initializing...", True, (0, 0, 0))
+# 
+#         # Tell the motor to index the endpoints
+#         self.motor_cmd_q.put(MotorController.INDEX)
+# 
+#         # Tell the PLC to lock
+#         # self.plc_cmd_q.put(PinballPLC.LOCK)
+# 
+#         while True:         
+#             # Check the state of the motor
+#             if not self.motor_data_q.empty():
+#                 motor_status = self.motor_data_q.get()
+#                 pygame.event.post(pygame.event.Event(self.MOTOR_GET))
+#             
+#             # Check all pygame events
+#             for event in pygame.event.get():
+#                 # Handle the motor based events
+#                 if event.type == self.MOTOR_GET:
+#                     if motor_status == "DONE":
+#                         return GameState.ATTRACT
+# 
+#             self.screen.fill((0, 0, 0))
+#             self.screen.blit(init_text, (0, 0))
+# 
+#             pygame.display.flip()
+#             self.game_time.tick(self.FPS)
 
     def _attract_screen(self):
         # Initialize screen elements
@@ -206,7 +207,7 @@ class PinballManager:
         title_text = title_font.render("World Cup Pinball", True, (40, 40, 40))
         pressme_text = pressme_font.render("Press Start", True, (60, 30, 60))
 
-        pygame.mixer.music.load("C:/dev/pinball/capstone-pinball/media/bertsz_drum_and_bass.ogg")
+        pygame.mixer.music.load("/home/ian/capstone-pinball/media/bertsz_drum_and_bass.ogg")
         pygame.mixer.music.set_volume(0.2)
         pygame.mixer.music.play(-1)
 
@@ -504,7 +505,7 @@ class PinballManager:
 
 if __name__ == "__main__":
     queues = []
-    for i in range(3):
+    for i in range(4):
         queues.append(Queue())
     game = PinballManager(*queues)
     game.run_game()

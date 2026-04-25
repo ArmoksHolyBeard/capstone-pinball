@@ -15,7 +15,7 @@ import digitalio
 # Time delay between steps in s
 TRIGGER_PULSE_TIME = 0.000005
 FAST_STEP = 0.000010
-SLOW_STEP = 0.000020
+SLOW_STEP = 0.000200
 
 # Linear direction of the goalie
 RIGHT = False
@@ -76,6 +76,7 @@ class MotorController:
             elif self.direction == LEFT:
                 self.count -= 1
 
+
             self.step_pin.value = True
             sleep(TRIGGER_PULSE_TIME)
             self.step_pin.value = False
@@ -93,7 +94,7 @@ class MotorController:
 
         # Get the right side limit
         self._set_direction(RIGHT)
-        while not self._safe_step_once():
+        while self._safe_step_once():
             sleep(SLOW_STEP)
             yield
         self.right_step_limit = self.count
@@ -108,7 +109,7 @@ class MotorController:
         sleep(1)
 
         # Get the left limit
-        while not self._safe_step_once():
+        while self._safe_step_once():
             sleep(SLOW_STEP)
             yield
         self.left_step_limit = self.count
@@ -126,11 +127,21 @@ class MotorController:
         count_total = self.right_step_limit - self.left_step_limit
         self.right_step_limit = count_total // 2
         self.left_step_limit = -self.right_step_limit
+        
+        print(f"Limits: {self.left_step_limit}, {self.right_step_limit}")
 
-        print("Moving to center")
-        while self.count != 0:
-            self._step_once()
+#         print("Moving to center")
+        self._set_direction(LEFT)
+        while _safe_step_once():
             sleep(SLOW_STEP)
+            yield
+        self.count = self.left_step_limit
+        
+#       Move a quarter turn back from the sensor
+        self._set_direction(RIGHT)
+        for i in range(800):
+            self._step_once()
+            sleep(FAST_STEP)
             yield
         
         self.endpoints_set = True
@@ -144,10 +155,10 @@ class MotorController:
     def _defend(self):
         self.disable.value = False
         while True:
-            target = randint(self.left_step_limit+800, self.right_step_limit-800)
+            target = randint(self.left_step_limit+700, self.right_step_limit-700)
+            print(f"Count: {self.count}, Target: {target}")
             if self.count > 0:
                 self._set_direction(LEFT)
-                target = -target
             else:
                 self._set_direction(RIGHT)
             while self.count != target:

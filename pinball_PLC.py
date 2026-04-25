@@ -5,7 +5,7 @@ from time import sleep
 from pylogix import PLC
 
 # IP address of the PLC, hardcoded for now
-IP = '10.230.55.126'
+IP = '192.168.99.6'
 
 # Put all tag addresses here as constants
 IN_PLAY = "Program:MainProgram.Life_Counter.ACC"
@@ -133,12 +133,12 @@ if __name__ == "__main__":
         test_Q2 = Queue()
         test_PLC = PinballPLC(test_Q1, test_Q2)
         print(test_PLC._read())
-        print(test_PLC._reset_tags())
-        print()
-        if input("Continue? (y/n)").lower() == "y":
-            for i in range(20):
-                for tag, value in test_PLC._read().items():
-                    print(f"{tag}: {value}")
-                print()
-                sleep(0.5)
-        test_PLC._end()
+#         print(test_PLC._reset_tags())
+#         print()
+#         if input("Continue? (y/n)").lower() == "y":
+#             for i in range(20):
+#                 for tag, value in test_PLC._read().items():
+#                     print(f"{tag}: {value}")
+#                 print()
+#                 sleep(0.5)
+        test_PLC.plc.Close()
