@@ -8,20 +8,21 @@ from pylogix import PLC
 IP = '192.168.99.6'
 
 # Put all tag addresses here as constants
-IN_PLAY = "Program:MainProgram.Life_Counter.ACC"
+LIVES = "Program:MainProgram.Life_Counter.ACC"
 BUMPER_01 = "Program:MainProgram.B1C.ACC"
 BUMPER_02 = "Program:MainProgram.B2C.ACC"
 BUMPER_03 = "Program:MainProgram.B3C.ACC"
 STANDING_TARGETS = "Program:MainProgram.STC.ACC"
 RAMP_SPINNER = "Program:MainProgram.RampC.ACC"
 DROP_TARGETS = "Program:MainProgram.DTS.ACC"
-KICKBACK = "Program:MainProgram.KBC.ACC"
+KICKBACK = "Program:MainProgram.KBC.ACC" #At the moment, this is for locking out the kickback. Don't reset to 0
 GOAL = "Program:MainProgram.GC.ACC"
-
-# TODO: Tags for system enable, start button, maybe flippers
-SYSTEM_ENABLE = "foo"
+GAME_LOCK = "Program:MainProgram.GL" # Disable when true
+# Need addresses
 FREE_KICK = "bar"
 START_BUTTON = "quux"
+# Additional
+IN_PLAY = "Program:MainProgram.BOL"
 
 # Create list of tags
 score_tags = [
@@ -47,7 +48,7 @@ all_tags = [
 ]
 # Associate tags with IDs (used in main game loop)
 tag_names = {
-    SYSTEM_ENABLE: "system_enable",
+    GAME_LOCK: "game_lock",
     START_BUTTON: "start_button",
     IN_PLAY: 'in_play',
     BUMPER_01: 'bumper1',
@@ -93,7 +94,7 @@ class PinballPLC():
         return self.tag_values
     
     def _toggle_lock(self, enabled: bool):
-        response = self.plc.Write(SYSTEM_ENABLE, enabled)
+        response = self.plc.Write(GAME_LOCK, enabled)
     
     def _reset_tags(self):
         request = [(tag, 0) for tag in score_tags]
