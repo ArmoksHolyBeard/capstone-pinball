@@ -1,6 +1,6 @@
 ''' The set of functions for communicating with the PLC'''
 from queue import Queue
-from time import sleep
+import time
 
 from pylogix import PLC
 
@@ -115,6 +115,7 @@ class PinballPLC():
     
     def read_loop(self):
         while True:
+            request = [(tag, 0) for tag in score_tags]
             # Check the command queue
             if not self.cmd_q.empty():
                 cmd = self.cmd_q.get() # Maybe set a timeout with exception handling?
@@ -124,16 +125,22 @@ class PinballPLC():
                     self.plc.Close()
                     return
                 if cmd == self.LOCK:
-                    self._toggle_lock(True)
+                    request.append((GAME_LOCK, True))
                 if cmd == self.UNLOCK:
-                    self._toggle_lock(False)
+                    request.append((GAME_LOCK, False))
+            start_time = time.perf_counter()
             for tag in self.plc.Read(all_tags):
                 self.tag_values[tag_names[tag.TagName]] = tag.Value
+            end_time = time.perf_counter()
+            print(f"PLC read in {end_time-start_time:.2f}")
             self.data_q.put(self.tag_values)
-            request = [(tag, 0) for tag in score_tags]
+            # request = [(tag, 0) for tag in score_tags]
             # reset_in_play = 1 if self.tag_values['in_play'] > 0 else 0
             # request.append((IN_PLAY, reset_in_play))
+            start_time = time.perf_counter()
             response = self.plc.Write(request)
+            end_time = time.perf_counter()
+            print(f"PLC written to in {end_time-start_time:.2f}")
 
 if __name__ == "__main__":
     with PLC() as thing:

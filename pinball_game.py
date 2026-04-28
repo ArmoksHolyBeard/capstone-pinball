@@ -26,7 +26,7 @@ class Score:
     def __init__(self, surface):
         self.surface = surface
         self.font = pygame.font.Font(size=128)
-        self.location = (surface.get_size()[0] // 2 - 100, surface.get_size()[1] - 100)
+        self.location = (surface.get_size()[0] // 2 - 100, surface.get_size()[1] - 200)
         self.color = (63, 63, 63)
         self.points = 0
     
@@ -104,7 +104,7 @@ class PinballManager:
         self.game_time = pygame.time.Clock()
 
         # Initialize the window to fullscreen
-        self.screen = pygame.display.set_mode((1600, 900))#, pygame.FULLSCREEN)
+        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         pygame.display.set_caption("World Cup Pinball")
 
         # Set up background
@@ -282,14 +282,20 @@ class PinballManager:
 
         plc_data = {}
         grace = True
-        ball_in_play = False
+        ball_in_play = True #
         hat_trick_count = 0
-        pygame.time.set_timer(self.TIMER_EVENT, 0)
+
+        # Grace period
+        pygame.time.set_timer(self.TIMER_EVENT, 10000)
 
         self.left_deadlane_lights.begin_sequence("bullet", 0x004411, 2)
         self.right_deadlane_lights.begin_sequence("bullet", 0x004411, 2)
 
-        # Tell the PLC to unlock
+        self.motor_cmd_q.put(MotorController.DEFEND)
+
+        pygame.mixer.music.stop()
+
+        # # Tell the PLC to unlock
         # self.plc_cmd_q.put(PinballPLC.UNLOCK)
 
         while True:
@@ -321,18 +327,18 @@ class PinballManager:
                 
                 # Handles the PLC based events
                 if event.type == self.PLC_GET:
-                    if not ball_in_play and plc_data['lives'] > 0:
-                        ball_in_play = True
+                    if (self.lives + plc_data['lives']) != 3:
+                        # ball_in_play = True
                         # kickoff sound/video
-                        pygame.time.set_timer(self.TIMER_EVENT, 10000)
-                    if ball_in_play and plc_data['lives'] < 1:
-                        if grace:
-                            # try again sound/video
-                            ball_in_play = False
-                        else:
-                            self.lives.subtract_balls()
-                            # self.plc_cmd_q.put(PinballPLC.LOCK)
-                            return GameState.END_OF_BALL
+                        # pygame.time.set_timer(self.TIMER_EVENT, 10000)
+                    # if ball_in_play and plc_data['lives'] < 1:
+                        # if grace:
+                        #     # try again sound/video
+                        #     ball_in_play = False
+                        # else:
+                        self.lives.subtract_balls()
+                        # self.plc_cmd_q.put(PinballPLC.LOCK)
+                        return GameState.END_OF_BALL
                     if (hit_count := plc_data['bumper_1']) > 0:
                         self.score.addPoints(1000*hit_count)
                     if (hit_count := plc_data['bumper_2']) > 0:
@@ -400,6 +406,9 @@ class PinballManager:
         # Display for 5 seconds
         pygame.time.set_timer(self.TIMER_EVENT, 3000)
 
+        # Tell the PLC to unlock
+        self.plc_cmd_q.put(PinballPLC.LOCK)
+
         # Play failure video
         # self._play_video(1)
 
@@ -424,6 +433,8 @@ class PinballManager:
                     if self.lives.balls <= 0:
                         return GameState.GAME_OVER
                     else:
+                        # Tell the PLC to unlock
+                        self.plc_cmd_q.put(PinballPLC.UNLOCK)
                         return GameState.IN_PLAY
                 
                 # Handles any key presses
