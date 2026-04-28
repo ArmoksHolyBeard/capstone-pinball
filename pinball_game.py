@@ -178,7 +178,7 @@ class PinballManager:
         self.motor_cmd_q.put(MotorController.INDEX)
 
         # Tell the PLC to lock
-        # self.plc_cmd_q.put(PinballPLC.LOCK)
+        self.plc_cmd_q.put(PinballPLC.LOCK)
 
         while True:         
             # Check the state of the motor
@@ -216,21 +216,21 @@ class PinballManager:
         self.right_side_lights.begin_sequence("solid", 0x444444)
         self.rear_lights.begin_sequence("solid", 0x444444)
 
-        self.left_deadlane_lights.begin_sequence("bullet", 0x004411, 2)
-        self.right_deadlane_lights.begin_sequence("bullet", 0x004411, 2)
+        self.left_deadlane_lights.begin_sequence("solid", 0x004411)
+        self.right_deadlane_lights.begin_sequence("solid", 0x004411)
 
         self.left_slingshot_lights.begin_sequence("solid", 0x660000)
         self.right_slingshot_lights.begin_sequence("solid", 0x660000)
 
         self.ramp_lights.begin_sequence("bullet", 0x000077, 2)
-        self.goal_lights.begin_sequence("alternate", 0x440044, 30)
-        self.freekick_lights.begin_sequence("blink", 0x444400, 15)
+        self.goal_lights.begin_sequence("blink", 0x440044, 10)
+        self.freekick_lights.begin_sequence("blink", 0x444400, 10)
 
         
         pygame.time.set_timer(self.TIMER_EVENT, 1000)
 
         # Tell the PLC to lock
-        # self.plc_cmd_q.put(PinballPLC.LOCK)
+        self.plc_cmd_q.put(PinballPLC.LOCK)
 
         plc_data = {}
 
@@ -259,10 +259,12 @@ class PinballManager:
                     keys = pygame.key.get_pressed()
                     if keys[K_ESCAPE]:
                         pygame.event.post(pygame.event.Event(QUIT))
+                    if keys[K_f]:
+                        return GameState.IN_PLAY
 
                 # Handles the PLC based events
                 if event.type == self.PLC_GET:
-                    if plc_data['in_play']:
+                    if plc_data['start_button']:
                         return GameState.IN_PLAY
                     plc_data = {}
 
@@ -282,7 +284,7 @@ class PinballManager:
 
         plc_data = {}
         grace = True
-        ball_in_play = True #
+        ball_in_play = True
         hat_trick_count = 0
 
         # Grace period
@@ -295,14 +297,15 @@ class PinballManager:
 
         pygame.mixer.music.stop()
 
-        # # Tell the PLC to unlock
-        # self.plc_cmd_q.put(PinballPLC.UNLOCK)
+        # Tell the PLC to unlock
+        self.plc_cmd_q.put(PinballPLC.UNLOCK)
 
         while True:
 
             # Post event when PLC comms returns with a value
             if not self.plc_data_q.empty():
                 plc_data = self.plc_data_q.get()
+#                 print(plc_data)
                 pygame.event.post(pygame.event.Event(self.PLC_GET))
 
             # Check all pygame events
@@ -317,6 +320,7 @@ class PinballManager:
                     grace = False
                     self.left_deadlane_lights.begin_sequence("solid", 0x550011)
                     self.right_deadlane_lights.begin_sequence("solid", 0x550011)
+#                     self.goal_lights.begin_sequence("blink", 0x440044, 10)
                     pygame.time.set_timer(self.TIMER_EVENT, 0)
 
                 # Handles any key presses
@@ -327,27 +331,24 @@ class PinballManager:
                 
                 # Handles the PLC based events
                 if event.type == self.PLC_GET:
-                    if (self.lives + plc_data['lives']) != 3:
-                        # ball_in_play = True
-                        # kickoff sound/video
-                        # pygame.time.set_timer(self.TIMER_EVENT, 10000)
-                    # if ball_in_play and plc_data['lives'] < 1:
-                        # if grace:
-                        #     # try again sound/video
-                        #     ball_in_play = False
-                        # else:
-                        self.lives.subtract_balls()
-                        # self.plc_cmd_q.put(PinballPLC.LOCK)
-                        return GameState.END_OF_BALL
-                    if (hit_count := plc_data['bumper_1']) > 0:
-                        self.score.addPoints(1000*hit_count)
-                    if (hit_count := plc_data['bumper_2']) > 0:
-                        self.score.addPoints(1000*hit_count)
-                    if (hit_count := plc_data['bumper_3']) > 0:
-                        self.score.addPoints(1000*hit_count)
-                    if (hit_count := plc_data['standing_targets']) > 0:
+                    if plc_data['in_play']:
+                        if not ball_in_play:
+                            ball_in_play = True
+                            self.cheers[1].play()
+                            pygame.time.set_timer(self.TIMER_EVENT, 10000)
+                    elif ball_in_play:
+                        if grace:
+                            # try again sound/video
+                            ball_in_play = False
+                        else:
+                            self.lives.subtract_balls()
+                            self.plc_cmd_q.put(PinballPLC.LOCK)
+                            return GameState.END_OF_BALL
+                    if plc_data['bumpers'] > 0:
+                        self.score.addPoints(1000*plc_data['bumpers'])
+                    if plc_data['standing_targets'] > 0:
                         random.choice(self.cheers).play()
-                        self.score.addPoints(10000*hit_count)
+                        self.score.addPoints(10000*plc_data['standing_targets'])
                         self.standing_target_count += 1
                     if (hit_count := plc_data['ramp_spinner']) > 0:
                         # ramp sound
@@ -364,9 +365,9 @@ class PinballManager:
                         # flag sound/video
                         self.score.addPoints(60000*hit_count)
                         self.drop_target_count += 1
-                    # if plc_data['kickback'] > 0:
-                    #     # throw-in sound/video
-                    #     self.score.addPoints(250000)
+#                     # if plc_data['kickback'] > 0:
+#                     #     # throw-in sound/video
+#                     #     self.score.addPoints(250000)
                     if plc_data['goal'] > 0:
                         if hat_trick_count >= 3:
                             # hat trick sound/video
@@ -376,6 +377,8 @@ class PinballManager:
                             # goal sound/video
                             hat_trick_count += 1
                         self.score.addPoints(1000000)
+                        self.goal_lights.begin_sequence("alternate", 0x660022, 4)
+                        pygame.time.set_timer(self.TIMER_EVENT, 2000)
                         self._play_video(1)
                     plc_data = {}
 
@@ -474,6 +477,7 @@ class PinballManager:
                 highscores.append(line)
 
         self.score.reset()
+        self.lives.balls = 3
 
         plc_data = {}
 
@@ -529,8 +533,10 @@ class PinballManager:
         
 
 if __name__ == "__main__":
-    queues = []
-    for i in range(4):
-        queues.append(Queue())
-    game = PinballManager(*queues)
+    plc_data_q = Queue()
+    plc_cmd_q = Queue()
+    motor_data_q =Queue()
+    motor_cmd_q = Queue()
+    motor_data_q.put("DONE")
+    game = PinballManager(plc_data_q, plc_cmd_q, motor_data_q, motor_cmd_q)
     game.run_game()

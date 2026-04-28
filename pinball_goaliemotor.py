@@ -15,7 +15,7 @@ import digitalio
 # Time delay between steps in s
 TRIGGER_PULSE_TIME = 0.000005
 FAST_STEP = 0.000010
-SLOW_STEP = 0.000200
+SLOW_STEP = 0.000160
 
 # Linear direction of the goalie
 RIGHT = False
@@ -156,7 +156,7 @@ class MotorController:
         self.disable.value = False
         while True:
             target = randint(self.left_step_limit+700, self.right_step_limit-700)
-            print(f"Count: {self.count}, Target: {target}")
+#             print(f"Count: {self.count}, Target: {target}")
             if self.count > 0:
                 self._set_direction(LEFT)
             else:
@@ -201,21 +201,21 @@ class MotorController:
 
 
 if __name__ == "__main__":
-    q1 = Queue()
-    q2 = Queue()
-    motor = MotorController(q1, q2)
-    input("Enter to continue...")
-    motor.state = motor._index_motor()
-    while True:
-        try:
-            next(motor.state)
-        except StopIteration:
-            motor.state.close()
-            state = motor._pause_motor()
-            break
-    motor.state = motor._defend()
-    for i in range(65535):
-        next(motor.state)
-
-    motor.state.close()
+#     q1 = Queue()
+#     q2 = Queue()
+#     motor = MotorController(q1, q2)
+#     input("Enter to continue...")
+#     motor.state = motor._index_motor()
+#     while True:
+#         try:
+#             next(motor.state)
+#         except StopIteration:
+#             motor.state.close()
+#             state = motor._pause_motor()
+#             break
+#     motor.state = motor._defend()
+#     for i in range(65535):
+#         next(motor.state)
+# 
+#     motor.state.close()
     motor.disable.value = True
