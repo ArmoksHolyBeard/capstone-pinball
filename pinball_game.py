@@ -170,34 +170,34 @@ class PinballManager:
         return
 
     def _system_init(self):
-        return GameState.ATTRACT
-#         init_font = pygame.font.Font(size=32)
-#         init_text = init_font.render("Initializing...", True, (0, 0, 0))
-# 
-#         # Tell the motor to index the endpoints
-#         self.motor_cmd_q.put(MotorController.INDEX)
-# 
-#         # Tell the PLC to lock
-#         # self.plc_cmd_q.put(PinballPLC.LOCK)
-# 
-#         while True:         
-#             # Check the state of the motor
-#             if not self.motor_data_q.empty():
-#                 motor_status = self.motor_data_q.get()
-#                 pygame.event.post(pygame.event.Event(self.MOTOR_GET))
-#             
-#             # Check all pygame events
-#             for event in pygame.event.get():
-#                 # Handle the motor based events
-#                 if event.type == self.MOTOR_GET:
-#                     if motor_status == "DONE":
-#                         return GameState.ATTRACT
-# 
-#             self.screen.fill((0, 0, 0))
-#             self.screen.blit(init_text, (0, 0))
-# 
-#             pygame.display.flip()
-#             self.game_time.tick(self.FPS)
+        # return GameState.ATTRACT
+        init_font = pygame.font.Font(size=32)
+        init_text = init_font.render("Initializing...", True, (0, 0, 0))
+
+        # Tell the motor to index the endpoints
+        self.motor_cmd_q.put(MotorController.INDEX)
+
+        # Tell the PLC to lock
+        # self.plc_cmd_q.put(PinballPLC.LOCK)
+
+        while True:         
+            # Check the state of the motor
+            if not self.motor_data_q.empty():
+                motor_status = self.motor_data_q.get()
+                pygame.event.post(pygame.event.Event(self.MOTOR_GET))
+            
+            # Check all pygame events
+            for event in pygame.event.get():
+                # Handle the motor based events
+                if event.type == self.MOTOR_GET:
+                    if motor_status == "DONE":
+                        return GameState.ATTRACT
+
+            self.screen.fill((0, 0, 0))
+            self.screen.blit(init_text, (200, 200))
+
+            pygame.display.flip()
+            self.game_time.tick(self.FPS)
 
     def _attract_screen(self):
         # Initialize screen elements
@@ -223,7 +223,7 @@ class PinballManager:
         self.right_slingshot_lights.begin_sequence("solid", 0x660000)
 
         self.ramp_lights.begin_sequence("bullet", 0x000077, 2)
-        self.goal_lights.begin_sequence("alternate", 0x440044, 15)
+        self.goal_lights.begin_sequence("alternate", 0x440044, 30)
         self.freekick_lights.begin_sequence("blink", 0x444400, 15)
 
         
@@ -262,7 +262,7 @@ class PinballManager:
 
                 # Handles the PLC based events
                 if event.type == self.PLC_GET:
-                    if plc_data['start_button']:
+                    if plc_data['in_play']:
                         return GameState.IN_PLAY
                     plc_data = {}
 
@@ -346,13 +346,21 @@ class PinballManager:
                     if (hit_count := plc_data['ramp_spinner']) > 0:
                         # ramp sound
                         self.score.addPoints(20000*hit_count)
-                    if (hit_count := plc_data['drop_targets']) > 0:
+                    if (hit_count := plc_data['drop_target_1']) > 0:
                         # flag sound/video
                         self.score.addPoints(60000*hit_count)
                         self.drop_target_count += 1
-                    if plc_data['kickback'] > 0:
-                        # throw-in sound/video
-                        self.score.addPoints(250000)
+                    if (hit_count := plc_data['drop_target_2']) > 0:
+                        # flag sound/video
+                        self.score.addPoints(60000*hit_count)
+                        self.drop_target_count += 1
+                    if (hit_count := plc_data['drop_target_3']) > 0:
+                        # flag sound/video
+                        self.score.addPoints(60000*hit_count)
+                        self.drop_target_count += 1
+                    # if plc_data['kickback'] > 0:
+                    #     # throw-in sound/video
+                    #     self.score.addPoints(250000)
                     if plc_data['goal'] > 0:
                         if hat_trick_count >= 3:
                             # hat trick sound/video
@@ -362,6 +370,7 @@ class PinballManager:
                             # goal sound/video
                             hat_trick_count += 1
                         self.score.addPoints(1000000)
+                        self._play_video(1)
                     plc_data = {}
 
             # Render the background and screen elements
@@ -457,6 +466,8 @@ class PinballManager:
 
         plc_data = {}
 
+        pygame.time.set_timer(self.TIMER_EVENT, 10000)
+
         while True:
 
             # Post event when PLC comms returns with a value
@@ -469,6 +480,9 @@ class PinballManager:
                 # Quit the game
                 if event.type == QUIT:  
                     return GameState.QUIT
+                
+                if event.type == self.TIMER_EVENT:
+                    return GameState.ATTRACT
                 
                 # Handles any key presses
                 if event.type == pygame.KEYDOWN:

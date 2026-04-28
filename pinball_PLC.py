@@ -8,21 +8,23 @@ from pylogix import PLC
 IP = '192.168.99.6'
 
 # Put all tag addresses here as constants
-LIVES = "Program:MainProgram.Life_Counter.ACC"
 BUMPER_01 = "Program:MainProgram.B1C.ACC"
 BUMPER_02 = "Program:MainProgram.B2C.ACC"
 BUMPER_03 = "Program:MainProgram.B3C.ACC"
 STANDING_TARGETS = "Program:MainProgram.STC.ACC"
 RAMP_SPINNER = "Program:MainProgram.RampC.ACC"
-DROP_TARGETS = "Program:MainProgram.DTS.ACC"
-KICKBACK = "Program:MainProgram.KBC.ACC" #At the moment, this is for locking out the kickback. Don't reset to 0
+DROP_TARGET_01 = "Program:MainProgram.DTS.ACC"
+DROP_TARGET_02 = "Program:MainProgram.DTS2C.ACC"
+DROP_TARGET_03 = "Program:MainProgram.DTS3C.ACC"
 GOAL = "Program:MainProgram.GC.ACC"
+
+LIVES = "Program:MainProgram.Life_Counter.ACC" # Starts at 0, game ends at 3, don't reset
+KICKBACK = "Program:MainProgram.KBC.ACC" #At the moment, this is for locking out the kickback. Don't reset to 0
 GAME_LOCK = "Program:MainProgram.GL" # Disable when true
+IN_PLAY = "Program:MainProgram.BOL"
 # Need addresses
 FREE_KICK = "bar"
 START_BUTTON = "quux"
-# Additional
-IN_PLAY = "Program:MainProgram.BOL"
 
 # Create list of tags
 score_tags = [
@@ -31,35 +33,41 @@ score_tags = [
     BUMPER_03,
     STANDING_TARGETS,
     RAMP_SPINNER,
-    DROP_TARGETS,
-    KICKBACK,
+    DROP_TARGET_01,
+    DROP_TARGET_02,
+    DROP_TARGET_03,
     GOAL
 ]
 all_tags = [
-    IN_PLAY,
     BUMPER_01,
     BUMPER_02,
     BUMPER_03,
     STANDING_TARGETS,
     RAMP_SPINNER,
-    DROP_TARGETS,
+    DROP_TARGET_01,
+    DROP_TARGET_02,
+    DROP_TARGET_03,
+    GOAL,
+    LIVES,
     KICKBACK,
-    GOAL
+    IN_PLAY,
+    GAME_LOCK
 ]
 # Associate tags with IDs (used in main game loop)
 tag_names = {
-    GAME_LOCK: "game_lock",
-    START_BUTTON: "start_button",
-    IN_PLAY: 'in_play',
-    BUMPER_01: 'bumper1',
-    BUMPER_02: 'bumper2',
-    BUMPER_03: 'bumper3',
+    BUMPER_01: 'bumper_1',
+    BUMPER_02: 'bumper_2',
+    BUMPER_03: 'bumper_3',
     STANDING_TARGETS: 'standing_targets',
     RAMP_SPINNER: 'ramp_spinner',
-    DROP_TARGETS: 'drop_targets',
+    DROP_TARGET_01: 'drop_target_1',
+    DROP_TARGET_02: 'drop_target_2',
+    DROP_TARGET_03: 'drop_target_3',
+    GOAL: 'goal',
+    LIVES: 'lives',
     KICKBACK: 'kickback',
-    FREE_KICK: "free_kick",
-    GOAL: 'goal'
+    GAME_LOCK: 'game_lock',
+    IN_PLAY: 'in_play'
 }
 
 class PinballPLC():
@@ -73,19 +81,22 @@ class PinballPLC():
         self.cmd_q = cmd_q
         self.plc = PLC(IP)
         self.tag_values = {
-            'system_enable': 0,
-            'start_button': 0,
-            'in_play': 0,
             'bumper_1': 0,
             'bumper_2': 0,
             'bumper_3': 0,
             'standing_targets': 0,
             'ramp_spinner': 0,
-            'drop_targets': 0,
+            'drop_target_1': 0,
+            'drop_target_2': 0,
+            'drop_target_3': 0,
+            'lives': 0,
             'kickback': 0,
-            'free_kick': 0,
-            'goal': 0
+            'game_lock': 0,
+            'in_play': 0
         }
+        request = [(tag, 0) for tag in score_tags]
+        response = self.plc.Write(request)
+
     
     def _read(self):
         current_tags = self.plc.Read(all_tags)
@@ -120,8 +131,8 @@ class PinballPLC():
                 self.tag_values[tag_names[tag.TagName]] = tag.Value
             self.data_q.put(self.tag_values)
             request = [(tag, 0) for tag in score_tags]
-            reset_in_play = 1 if self.tag_values['in_play'] > 0 else 0
-            request.append((IN_PLAY, reset_in_play))
+            # reset_in_play = 1 if self.tag_values['in_play'] > 0 else 0
+            # request.append((IN_PLAY, reset_in_play))
             response = self.plc.Write(request)
 
 if __name__ == "__main__":

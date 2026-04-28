@@ -132,7 +132,7 @@ class MotorController:
 
 #         print("Moving to center")
         self._set_direction(LEFT)
-        while _safe_step_once():
+        while self._safe_step_once():
             sleep(SLOW_STEP)
             yield
         self.count = self.left_step_limit
@@ -162,7 +162,13 @@ class MotorController:
             else:
                 self._set_direction(RIGHT)
             while self.count != target:
-                self._safe_step_once()
+                if not self._safe_step_once():
+                    self._set_direction(not self.direction)
+                    for i in range(800):
+                        self._step_once()
+                        sleep(SLOW_STEP)
+                        yield
+                    break
                 sleep(SLOW_STEP)
                 yield
     
