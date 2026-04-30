@@ -172,7 +172,7 @@ class PinballManager:
     def _system_init(self):
         # return GameState.ATTRACT
         init_font = pygame.font.Font(size=32)
-        init_text = init_font.render("Initializing...", True, (0, 0, 0))
+        init_text = init_font.render("Initializing...", True, (255, 255, 255))
 
         # Tell the motor to index the endpoints
         self.motor_cmd_q.put(MotorController.INDEX)
@@ -212,19 +212,19 @@ class PinballManager:
         pygame.mixer.music.play(-1)
 
         # Start some light shows
-        self.left_side_lights.begin_sequence("solid", 0x444444)
-        self.right_side_lights.begin_sequence("solid", 0x444444)
-        self.rear_lights.begin_sequence("solid", 0x444444)
+        self.left_side_lights.begin_sequence("solid", 0, 0x444444)
+        self.right_side_lights.begin_sequence("solid", 0, 0x444444)
+        self.rear_lights.begin_sequence("solid", 0, 0x444444)
 
-        self.left_deadlane_lights.begin_sequence("solid", 0x004411)
-        self.right_deadlane_lights.begin_sequence("solid", 0x004411)
+        self.left_deadlane_lights.begin_sequence("solid", 0, 0x004411)
+        self.right_deadlane_lights.begin_sequence("solid", 0, 0x004411)
 
-        self.left_slingshot_lights.begin_sequence("solid", 0x660000)
-        self.right_slingshot_lights.begin_sequence("solid", 0x660000)
+        self.left_slingshot_lights.begin_sequence("solid", 0, 0x660000)
+        self.right_slingshot_lights.begin_sequence("solid", 0, 0x660000)
 
-        self.ramp_lights.begin_sequence("bullet", 0x000077, 2)
-        self.goal_lights.begin_sequence("blink", 0x440044, 10)
-        self.freekick_lights.begin_sequence("blink", 0x444400, 10)
+        self.ramp_lights.begin_sequence("bullet", 0, 0x000066, 4)
+        self.goal_lights.begin_sequence("alternate", 0, 0x440044, 10)
+        self.freekick_lights.begin_sequence("alternate", 0, 0x444400, 10)
 
         
         pygame.time.set_timer(self.TIMER_EVENT, 1000)
@@ -287,11 +287,11 @@ class PinballManager:
         ball_in_play = True
         hat_trick_count = 0
 
-        # Grace period
-        pygame.time.set_timer(self.TIMER_EVENT, 10000)
+        pygame.time.set_timer(self.TIMER_EVENT, 0)
 
-        self.left_deadlane_lights.begin_sequence("bullet", 0x004411, 2)
-        self.right_deadlane_lights.begin_sequence("bullet", 0x004411, 2)
+        self.left_deadlane_lights.begin_sequence("bullet", 0, 0x004411, 2)
+        self.right_deadlane_lights.begin_sequence("bullet", 0, 0x004411, 2)
+        self.freekick_lights.begin_sequence("solid", 0, 0x444400)
 
         self.motor_cmd_q.put(MotorController.DEFEND)
 
@@ -305,7 +305,6 @@ class PinballManager:
             # Post event when PLC comms returns with a value
             if not self.plc_data_q.empty():
                 plc_data = self.plc_data_q.get()
-#                 print(plc_data)
                 pygame.event.post(pygame.event.Event(self.PLC_GET))
 
             # Check all pygame events
@@ -318,9 +317,8 @@ class PinballManager:
                 # End the grace period after the timer
                 if event.type == self.TIMER_EVENT:
                     grace = False
-                    self.left_deadlane_lights.begin_sequence("solid", 0x550011)
-                    self.right_deadlane_lights.begin_sequence("solid", 0x550011)
-#                     self.goal_lights.begin_sequence("blink", 0x440044, 10)
+                    self.left_deadlane_lights.begin_sequence("solid", 0, 0x440011)
+                    self.right_deadlane_lights.begin_sequence("solid", 0, 0x440011)
                     pygame.time.set_timer(self.TIMER_EVENT, 0)
 
                 # Handles any key presses
@@ -341,6 +339,12 @@ class PinballManager:
                             # try again sound/video
                             ball_in_play = False
                         else:
+                            # dissapointed crowd sound
+                            self.left_side_lights.begin_sequence("blink", 60, 0x440000, 15)
+                            self.right_side_lights.begin_sequence("blink", 60, 0x440000, 15)
+                            self.rear_lights.begin_sequence("blink", 60, 0x440000, 15)
+                            self.left_slingshot_lights.begin_sequence("solid", 60, 0x006600)
+                            self.right_slingshot_lights.begin_sequence("solid", 60, 0x006600)
                             self.lives.subtract_balls()
                             self.plc_cmd_q.put(PinballPLC.LOCK)
                             return GameState.END_OF_BALL
@@ -352,6 +356,7 @@ class PinballManager:
                         self.standing_target_count += 1
                     if (hit_count := plc_data['ramp_spinner']) > 0:
                         # ramp sound
+                        self.ramp_lights.begin_sequence("bullet", 60, 0x000088)
                         self.score.addPoints(20000*hit_count)
                     if (hit_count := plc_data['drop_target_1']) > 0:
                         # flag sound/video
@@ -377,9 +382,11 @@ class PinballManager:
                             # goal sound/video
                             hat_trick_count += 1
                         self.score.addPoints(1000000)
-                        self.goal_lights.begin_sequence("alternate", 0x660022, 4)
-                        pygame.time.set_timer(self.TIMER_EVENT, 2000)
-                        self._play_video(1)
+                        self.goal_lights.begin_sequence("alternate", 90, 0x660022, 4)
+                        self.left_side_lights.begin_sequence("flood", 120, 0x444444, 2)
+                        self.right_side_lights.begin_sequence("flood", 120, 0x444444, 2)
+                        self.rear_lights.begin_sequence("solid", 120, 0x444444, 2)
+                        # self._play_video(1)
                     plc_data = {}
 
             # Render the background and screen elements
