@@ -11,7 +11,9 @@ IP = '192.168.99.6'
 BUMPERS = "Program:MainProgram.BC.ACC"
 STANDING_TARGETS = "Program:MainProgram.STC.ACC"
 RAMP_SPINNER = "Program:MainProgram.RampC.ACC"
-DROP_TARGETS = "Program:MainProgram.DTC.ACC"
+DROP_TARGET_1 = "Program:MainProgram.DT1C.ACC"
+DROP_TARGET_2 = "Program:MainProgram.DT2C.ACC"
+DROP_TARGET_3 = "Program:MainProgram.DT3C.ACC"
 GOAL = "Program:MainProgram.GC.ACC"
 FREE_KICK = "Program:MainProgram.FKC.ACC" #Bool
 START_BUTTON = "Program:MainProgram.SB_PRESSED" # Bool
@@ -24,7 +26,9 @@ resettable_tags = [
     BUMPERS,
     STANDING_TARGETS,
     RAMP_SPINNER,
-    DROP_TARGETS,
+    DROP_TARGET_1,
+    DROP_TARGET_2,
+    DROP_TARGET_3,
     GOAL,
     FREE_KICK,
     START_BUTTON
@@ -33,7 +37,9 @@ input_tags = [
     BUMPERS,
     STANDING_TARGETS,
     RAMP_SPINNER,
-    DROP_TARGETS,
+    DROP_TARGET_1,
+    DROP_TARGET_2,
+    DROP_TARGET_3,
     GOAL,
     FREE_KICK,
     START_BUTTON,
@@ -45,7 +51,9 @@ tag_names = {
     BUMPERS: 'bumpers',
     STANDING_TARGETS: 'standing_targets',
     RAMP_SPINNER: 'ramp_spinner',
-    DROP_TARGETS: 'drop_targets',
+    DROP_TARGET_1: 'drop_target_1',
+    DROP_TARGET_2: 'drop_target_2',
+    DROP_TARGET_3: 'drop_target_3',
     GOAL: 'goal',
     FREE_KICK: 'free_kick',
     START_BUTTON: 'start_button',
@@ -68,7 +76,9 @@ class PinballPLC():
             'bumpers': 0,
             'standing_targets': 0,
             'ramp_spinner': 0,
-            'drop_targets': 0,
+            'drop_target_1': 0,
+            'drop_target_2': 0,
+            'drop_target_3': 0,
             'goal': 0,
             'free_kick': 0,
             'start_button': 0,
@@ -77,13 +87,6 @@ class PinballPLC():
         }
         request = [(tag, 0) for tag in resettable_tags]
         response = self.plc.Write(request)
-
-    
-    def _read(self):
-        current_tags = self.plc.Read(all_tags)
-        for tag in current_tags:
-            self.tag_values[tag_names[tag.TagName]] = tag.Value
-        return self.tag_values
     
     def read_loop(self):
         while True:
