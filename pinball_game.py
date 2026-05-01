@@ -351,22 +351,15 @@ class PinballManager:
                     if plc_data['bumpers'] > 0:
                         self.score.addPoints(1000*plc_data['bumpers'])
                     if plc_data['standing_targets'] > 0:
-                        random.choice(self.cheers).play()
+                        self._play_video(1)
+#                         random.choice(self.cheers).play()
                         self.score.addPoints(10000*plc_data['standing_targets'])
                         self.standing_target_count += 1
                     if (hit_count := plc_data['ramp_spinner']) > 0:
                         # ramp sound
                         self.ramp_lights.begin_sequence("bullet", 60, 0x000088)
                         self.score.addPoints(20000*hit_count)
-                    if (hit_count := plc_data['drop_target_1']) > 0:
-                        # flag sound/video
-                        self.score.addPoints(60000*hit_count)
-                        self.drop_target_count += 1
-                    if (hit_count := plc_data['drop_target_2']) > 0:
-                        # flag sound/video
-                        self.score.addPoints(60000*hit_count)
-                        self.drop_target_count += 1
-                    if (hit_count := plc_data['drop_target_3']) > 0:
+                    if (hit_count := plc_data['drop_targets']) > 0:
                         # flag sound/video
                         self.score.addPoints(60000*hit_count)
                         self.drop_target_count += 1

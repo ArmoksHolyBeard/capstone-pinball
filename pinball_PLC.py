@@ -11,9 +11,7 @@ IP = '192.168.99.6'
 BUMPERS = "Program:MainProgram.BC.ACC"
 STANDING_TARGETS = "Program:MainProgram.STC.ACC"
 RAMP_SPINNER = "Program:MainProgram.RampC.ACC"
-DROP_TARGET_01 = "Program:MainProgram.DTS1C.ACC"
-DROP_TARGET_02 = "Program:MainProgram.DTS2C.ACC"
-DROP_TARGET_03 = "Program:MainProgram.DTS3C.ACC"
+DROP_TARGETS = "Program:MainProgram.DTC.ACC"
 GOAL = "Program:MainProgram.GC.ACC"
 FREE_KICK = "Program:MainProgram.FKC.ACC" #Bool
 START_BUTTON = "Program:MainProgram.SB_PRESSED" # Bool
@@ -26,9 +24,7 @@ resettable_tags = [
     BUMPERS,
     STANDING_TARGETS,
     RAMP_SPINNER,
-    DROP_TARGET_01,
-    DROP_TARGET_02,
-    DROP_TARGET_03,
+    DROP_TARGETS,
     GOAL,
     FREE_KICK,
     START_BUTTON
@@ -37,9 +33,7 @@ input_tags = [
     BUMPERS,
     STANDING_TARGETS,
     RAMP_SPINNER,
-    DROP_TARGET_01,
-    DROP_TARGET_02,
-    DROP_TARGET_03,
+    DROP_TARGETS,
     GOAL,
     FREE_KICK,
     START_BUTTON,
@@ -51,9 +45,7 @@ tag_names = {
     BUMPERS: 'bumpers',
     STANDING_TARGETS: 'standing_targets',
     RAMP_SPINNER: 'ramp_spinner',
-    DROP_TARGET_01: 'drop_target_1',
-    DROP_TARGET_02: 'drop_target_2',
-    DROP_TARGET_03: 'drop_target_3',
+    DROP_TARGETS: 'drop_targets',
     GOAL: 'goal',
     FREE_KICK: 'free_kick',
     START_BUTTON: 'start_button',
@@ -76,9 +68,7 @@ class PinballPLC():
             'bumpers': 0,
             'standing_targets': 0,
             'ramp_spinner': 0,
-            'drop_target_1': 0,
-            'drop_target_2': 0,
-            'drop_target_3': 0,
+            'drop_targets': 0,
             'goal': 0,
             'free_kick': 0,
             'start_button': 0,

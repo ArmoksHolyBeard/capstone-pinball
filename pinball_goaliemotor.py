@@ -15,7 +15,7 @@ import digitalio
 # Time delay between steps in s
 TRIGGER_PULSE_TIME = 0.000005
 FAST_STEP = 0.000010
-SLOW_STEP = 0.000160
+SLOW_STEP = 0.000080
 
 # Linear direction of the goalie
 RIGHT = False
@@ -201,9 +201,9 @@ class MotorController:
 
 
 if __name__ == "__main__":
-#     q1 = Queue()
-#     q2 = Queue()
-#     motor = MotorController(q1, q2)
+    q1 = Queue()
+    q2 = Queue()
+    motor = MotorController(q1, q2)
 #     input("Enter to continue...")
 #     motor.state = motor._index_motor()
 #     while True:
